@@ -26,16 +26,17 @@ public class SpaceInvadersEmu implements I8080Context {
 
     private int[] memory;
     private I8080 cpu;
-
-    private String[] ROMfiles = new String[] {
+    private String[] ROMfiles = new String[]{
         "roms/invaders.h",
         "roms/invaders.g",
         "roms/invaders.f",
         "roms/invaders.e"
     };
+    private static final int RAM_SIZ = 0x2000;
+    private static final int MEMORY_SIZ = 0x4000;
 
     public SpaceInvadersEmu() {
-        memory = new int[0x4000];
+        memory = new int[MEMORY_SIZ];
         readROMs();
         cpu = new I8080(this);
         cpu.reset();
@@ -45,8 +46,8 @@ public class SpaceInvadersEmu implements I8080Context {
         byte[] bytes = new byte[0x800];
         BufferedInputStream bis;
         int memAddr = 0;
-        
-        for (String filename: ROMfiles) {
+
+        for (String filename : ROMfiles) {
             bis = null;
             try {
                 bis = new BufferedInputStream(
@@ -56,7 +57,7 @@ public class SpaceInvadersEmu implements I8080Context {
                     System.err.println(filename + " is not valid.");
                     continue;
                 }
-                for (byte b: bytes) {
+                for (byte b : bytes) {
                     memory[memAddr++] = b & 0xFF;
                 }
             } catch (Exception e) {
@@ -66,7 +67,8 @@ public class SpaceInvadersEmu implements I8080Context {
                 if (bis != null) {
                     try {
                         bis.close();
-                    } catch (Exception ex) {}
+                    } catch (Exception ex) {
+                    }
                 }
             }
         }
@@ -75,22 +77,17 @@ public class SpaceInvadersEmu implements I8080Context {
     }
 
     public int read(int addr) {
-        assert addr == (addr & 0x3FFF) : "Invalid address for read: " + addr;
-
-        return memory[addr];
+        return addr < MEMORY_SIZ ? memory[addr] : 0;
     }
 
     public int read2(int addr) {
-        assert addr == (addr & 0x3FFF) : "Invalid address for read: " + addr;
-
-        return memory[addr] | (memory[addr+1] << 8);
+        return addr + 1 < MEMORY_SIZ ? memory[addr] | (memory[addr + 1] << 8) : 0;
     }
 
     public void write(int addr, int data) {
-        assert addr == (addr & 0x3FFF) : "Invalid address for write: " + addr;
-        assert data == (data & 0xFF) : "Invalid data in write: " + data;
-
-        memory[addr] = data;
+        if (addr >= RAM_SIZ && addr < MEMORY_SIZ) {
+            memory[addr] = data;
+        }
     }
 
     public I8080 getCpu() {
@@ -104,11 +101,11 @@ public class SpaceInvadersEmu implements I8080Context {
     public void runTextEmu() {
         Scanner s = new Scanner(System.in);
 
-        System.out.println(cpu.debugString());
+        System.out.println(I8080OpInfo.debugString(cpu, this));
         for (;;) {
             s.nextLine();
             cpu.instruction();
-            System.out.println(cpu.debugString());
+            System.out.println(I8080OpInfo.debugString(cpu, this));
         }
     }
 

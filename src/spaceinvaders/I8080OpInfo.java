@@ -15,106 +15,127 @@
  */
 package spaceinvaders;
 
+import java.util.Formatter;
+
 /**
  *
- * @author Barend
+ * @author Barend Scholtus
  */
 public class I8080OpInfo {
-    public static final int OPND_NONE      = 0;
-    public static final int OPND_R_R       = 1;
-    public static final int OPND_M_R       = 2;
-    public static final int OPND_R_M       = 3;
-    public static final int OPND_R_DATA    = 4;
-    public static final int OPND_M_DATA    = 5;
-    public static final int OPND_RP_DATA16 = 6;
-    public static final int OPND_RP        = 7;
-    public static final int OPND_ADDR      = 8;
-    public static final int OPND_R         = 9;
+//    public static final int OPND_NONE      = 0;
+//    public static final int OPND_R_R       = 1;
+//    public static final int OPND_M_R       = 2;
+//    public static final int OPND_R_M       = 3;
+//    public static final int OPND_R_DATA    = 4;
+//    public static final int OPND_M_DATA    = 5;
+//    public static final int OPND_RP_DATA16 = 6;
+//    public static final int OPND_RP        = 7;
+//    public static final int OPND_ADDR      = 8;
+//    public static final int OPND_R         = 9;
 
-    private String mnemonic;
-    private String description;
-    private int cycles;
-    private int operandType;
+    public final String mnemonic;
+    public final String operands;
+    public final int length;
+    public final int cyclesShort;
+    public final int cyclesLong;
+    public final boolean affectS;
+    public final boolean affectZ;
+    public final boolean affectA;
+    public final boolean affectP;
+    public final boolean affectC;
+    public final String description;
+    public final int operandType;
 
-    private I8080OpInfo(String mnemonic, String description, int cyclesSmall) {
-        this(mnemonic, description, cyclesSmall, I8080OpInfo.OPND_NONE);
-    }
-
-    private I8080OpInfo(String mnemonic, String description, int cyclesSmall, int operandType) {
+    /**
+     *
+     * @param mnemonic
+     * @param operands
+     * @param length
+     * @param cyclesShort
+     * @param cyclesLong
+     * @param S
+     * @param Z
+     * @param A
+     * @param P
+     * @param C
+     * @param description
+     * @param operandType
+     */
+    private I8080OpInfo(String mnemonic, String operands,
+            int length, int cyclesShort, int cyclesLong,
+            boolean S, boolean Z, boolean A, boolean P, boolean C,
+            String description, int operandType) {
         this.mnemonic = mnemonic;
+        this.operands = operands;
+        this.length = length;
+        this.cyclesShort = cyclesShort;
+        this.cyclesLong = cyclesLong;
+        this.affectS = S;
+        this.affectZ = Z;
+        this.affectA = A;
+        this.affectP = P;
+        this.affectC = C;
         this.description = description;
-        this.cycles = cyclesSmall;
         this.operandType = operandType;
     }
 
-    public String getMnemonic() {
-        return mnemonic;
-    }
+//    public static String getOperandsAsString(int[] memory, int opAddr) {
+//        int opcode = memory[opAddr];
+//        int data;
+//        StringBuilder sb = new StringBuilder();
+//        switch (opInfo[opcode].getOperandType()) {
+//            case OPND_R_R:
+//                return sb.append(intToRegister((opcode >> 3) & 0x07))
+//                         .append(' ').append(intToRegister(opcode & 0x07)).toString();
+//            case OPND_M_R:
+//                return sb.append('M')
+//                         .append(' ').append(intToRegister(opcode & 0x07)).toString();
+//            case OPND_R_M:
+//                return sb.append(intToRegister((opcode >> 3) & 0x07))
+//                         .append(' ').append('M').toString();
+//            case OPND_R_DATA:
+//                data = memory[(opAddr+1) % memory.length];
+//                return sb.append(intToRegister((opcode >> 3) & 0x07))
+//                         .append(' ').append(toHexString(data, 2)).toString();
+//            case OPND_M_DATA:
+//                data = memory[(opAddr+1) % memory.length];
+//                return sb.append('M').append(' ')
+//                         .append(toHexString(data, 2)).toString();
+//            case OPND_RP_DATA16:
+//                switch ((opcode >> 4) & 0x2) {
+//                    case 0: sb.append('B'); break;
+//                    case 1: sb.append('D'); break;
+//                    case 2: sb.append('H'); break;
+//                    case 3: sb.append('S').append('P'); break;
+//                }
+//                sb.append(' ');
+//                data = memory[(opAddr+1) % memory.length]
+//                            | (memory[(opAddr+2) % memory.length] << 8);
+//                sb.append(toHexString(data, 4));
+//                return sb.toString();
+//            case OPND_RP:
+//                switch ((opcode >> 4) & 0x2) {
+//                    case 0: sb.append('B'); break;
+//                    case 1: sb.append('D'); break;
+//                    case 2: sb.append('H'); break;
+//                    case 3: sb.append('S').append('P'); break;
+//                }
+//                return sb.toString();
+//            case OPND_ADDR:
+//                data = memory[(opAddr+1) % memory.length]
+//                            | (memory[(opAddr+2) % memory.length] << 8);
+//                return sb.append(toHexString(data, 4)).toString();
+//            case OPND_R:
+//                return sb.append(intToRegister((opcode >> 3) & 0x07)).toString();
+//        }
+//        return "";
+//    }
 
-    public String getDescription() {
-        return description;
-    }
-
-    public int getCycles() {
-        return cycles;
-    }
-
-    public int getOperandType() {
-        return operandType;
-    }
-
-    public static String getOperandsAsString(int[] memory, int opAddr) {
-        int opcode = memory[opAddr];
-        int data;
-        StringBuilder sb = new StringBuilder();
-        switch (opInfo[opcode].getOperandType()) {
-            case OPND_R_R:
-                return sb.append(intToRegister((opcode >> 3) & 0x07))
-                         .append(' ').append(intToRegister(opcode & 0x07)).toString();
-            case OPND_M_R:
-                return sb.append('M')
-                         .append(' ').append(intToRegister(opcode & 0x07)).toString();
-            case OPND_R_M:
-                return sb.append(intToRegister((opcode >> 3) & 0x07))
-                         .append(' ').append('M').toString();
-            case OPND_R_DATA:
-                data = memory[(opAddr+1) % memory.length];
-                return sb.append(intToRegister((opcode >> 3) & 0x07))
-                         .append(' ').append(toHexString(data, 2)).toString();
-            case OPND_M_DATA:
-                data = memory[(opAddr+1) % memory.length];
-                return sb.append('M').append(' ')
-                         .append(toHexString(data, 2)).toString();
-            case OPND_RP_DATA16:
-                switch ((opcode >> 4) & 0x2) {
-                    case 0: sb.append('B'); break;
-                    case 1: sb.append('D'); break;
-                    case 2: sb.append('H'); break;
-                    case 3: sb.append('S').append('P'); break;
-                }
-                sb.append(' ');
-                data = memory[(opAddr+1) % memory.length]
-                            | (memory[(opAddr+2) % memory.length] << 8);
-                sb.append(toHexString(data, 4));
-                return sb.toString();
-            case OPND_RP:
-                switch ((opcode >> 4) & 0x2) {
-                    case 0: sb.append('B'); break;
-                    case 1: sb.append('D'); break;
-                    case 2: sb.append('H'); break;
-                    case 3: sb.append('S').append('P'); break;
-                }
-                return sb.toString();
-            case OPND_ADDR:
-                data = memory[(opAddr+1) % memory.length]
-                            | (memory[(opAddr+2) % memory.length] << 8);
-                return sb.append(toHexString(data, 4)).toString();
-            case OPND_R:
-                return sb.append(intToRegister((opcode >> 3) & 0x07)).toString();
-        }
-        return "";
-    }
-
+    /**
+     *
+     * @param reg
+     * @return
+     */
     public static char intToRegister(int reg) {
         switch (reg) {
             case 0: return 'B';
@@ -126,313 +147,304 @@ public class I8080OpInfo {
             case 6: return 'M';
             case 7: return 'A';
         }
-        return '?';
+        throw new IllegalArgumentException("Not a valid register: " + reg);
     }
 
-    public static String toHexString(int i, int minLength) {
-        StringBuilder sb = new StringBuilder();
-        while (i != 0) {
-            switch (i & 0xf) {
-                case 0x0: sb.append('0'); break;
-                case 0x1: sb.append('1'); break;
-                case 0x2: sb.append('2'); break;
-                case 0x3: sb.append('3'); break;
-                case 0x4: sb.append('4'); break;
-                case 0x5: sb.append('5'); break;
-                case 0x6: sb.append('6'); break;
-                case 0x7: sb.append('7'); break;
-                case 0x8: sb.append('8'); break;
-                case 0x9: sb.append('9'); break;
-                case 0xa: sb.append('A'); break;
-                case 0xb: sb.append('B'); break;
-                case 0xc: sb.append('C'); break;
-                case 0xd: sb.append('D'); break;
-                case 0xe: sb.append('E'); break;
-                case 0xf: sb.append('F'); break;
-            }
-            i >>>= 4;
-        }
-        while (sb.length() < minLength) {
-            sb.append('0');
-        }
-        sb.reverse();
+    /**
+     * 
+     * @param cpu
+     * @param ctx
+     * @return
+     */
+    public static String debugString(I8080 cpu, I8080Context ctx) {
+        StringBuilder sb = new StringBuilder(80);
+        Formatter f = new Formatter(sb);
+
+        I8080OpInfo op = opCode[ctx.read(cpu.PC)];
+
+        f.format("PC=%04x SP=%04x A=%02x B=%02x C=%02x D=%02x E=%02x H=%02x L=%02x %d%d%d%d%d op:%5s %s",
+                cpu.PC, cpu.SP,
+                cpu.A, cpu.B, cpu.C, cpu.D, cpu.E, cpu.H, cpu.L,
+                cpu.Carry ? 1 : 0, cpu.Zero ? 1 : 0, cpu.Sign ? 1 : 0, cpu.Parity ? 1 : 0, cpu.AuxCarry ? 1 : 0,
+                op.mnemonic, op.operands);
+
         return sb.toString();
     }
 
     // 0x00-0x0f
-    private static final I8080OpInfo op0x00 = new I8080OpInfo("NOP", "No-operation", 4);
-    private static final I8080OpInfo op0x01 = new I8080OpInfo("LXI", "Load immediate register Pair B & C", 10, I8080OpInfo.OPND_RP_DATA16);
-    private static final I8080OpInfo op0x02 = new I8080OpInfo("STAX", "Store A indirect", 7, I8080OpInfo.OPND_RP);
-    private static final I8080OpInfo op0x03 = new I8080OpInfo("INX", "Increment B & C registers", 5, I8080OpInfo.OPND_RP);
-    private static final I8080OpInfo op0x04 = new I8080OpInfo("INR", "Increment register", 5, I8080OpInfo.OPND_R);
-    private static final I8080OpInfo op0x05 = new I8080OpInfo("DCR", "Decrement register", 5, I8080OpInfo.OPND_R);
-    private static final I8080OpInfo op0x06 = new I8080OpInfo("MVI", "Move immediate register", 7, I8080OpInfo.OPND_R_DATA);
-    private static final I8080OpInfo op0x07 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x08 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x09 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x0a = new I8080OpInfo("LDAX", "Load A indirect", 7, I8080OpInfo.OPND_RP);
-    private static final I8080OpInfo op0x0b = new I8080OpInfo("DCX", "Decrement B & C", 5, I8080OpInfo.OPND_RP);
-    private static final I8080OpInfo op0x0c = new I8080OpInfo("INR", "Increment register", 5, I8080OpInfo.OPND_R);
-    private static final I8080OpInfo op0x0d = new I8080OpInfo("DCR", "Decrement register", 5, I8080OpInfo.OPND_R);
-    private static final I8080OpInfo op0x0e = new I8080OpInfo("MVI", "Move immediate register", 7, I8080OpInfo.OPND_R_DATA);
-    private static final I8080OpInfo op0x0f = new I8080OpInfo("", "", 0, 0);
+    private static final I8080OpInfo op0x00 = new I8080OpInfo("NOP", "", 1, 4, 4, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x01 = new I8080OpInfo("LXI", "B,d16", 3, 10, 10, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x02 = new I8080OpInfo("STAX", "B", 1, 7, 7, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x03 = new I8080OpInfo("INX", "B", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x04 = new I8080OpInfo("INR", "B", 1, 5, 5, true, true, true, true, false, "", 0);
+    private static final I8080OpInfo op0x05 = new I8080OpInfo("DCR", "B", 1, 5, 5, true, true, true, true, false, "", 0);
+    private static final I8080OpInfo op0x06 = new I8080OpInfo("MVI", "B,d8", 2, 7, 7, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x07 = new I8080OpInfo("RLC", "", 1, 4, 4, false, false, false, false, true, "", 0);
+    private static final I8080OpInfo op0x08 = new I8080OpInfo("*NOP", "", 1, 4, 4, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x09 = new I8080OpInfo("DAD", "B", 1, 10, 10, false, false, false, false, true, "", 0);
+    private static final I8080OpInfo op0x0a = new I8080OpInfo("LDAX", "B", 1, 7, 7, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x0b = new I8080OpInfo("DCX", "B", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x0c = new I8080OpInfo("INR", "C", 1, 5, 5, true, true, true, true, false, "", 0);
+    private static final I8080OpInfo op0x0d = new I8080OpInfo("DCR", "C", 1, 5, 5, true, true, true, true, false, "", 0);
+    private static final I8080OpInfo op0x0e = new I8080OpInfo("MVI", "C,d8", 2, 7, 7, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x0f = new I8080OpInfo("RRC", "", 1, 4, 4, false, false, false, false, true, "", 0);
     // 0x10-0x1f
-    private static final I8080OpInfo op0x10 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x11 = new I8080OpInfo("LXI", "Load immediate register Pair D & E", 10, I8080OpInfo.OPND_RP_DATA16);
-    private static final I8080OpInfo op0x12 = new I8080OpInfo("STAX", "Store A indirect", 7, I8080OpInfo.OPND_RP);
-    private static final I8080OpInfo op0x13 = new I8080OpInfo("INX", "Increment D & E registers", 5, I8080OpInfo.OPND_RP);
-    private static final I8080OpInfo op0x14 = new I8080OpInfo("INR", "Increment register", 5, I8080OpInfo.OPND_R);
-    private static final I8080OpInfo op0x15 = new I8080OpInfo("DCR", "Decrement register", 5, I8080OpInfo.OPND_R);
-    private static final I8080OpInfo op0x16 = new I8080OpInfo("MVI", "Move immediate register", 7, I8080OpInfo.OPND_R_DATA);
-    private static final I8080OpInfo op0x17 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x18 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x19 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x1a = new I8080OpInfo("LDAX", "Load A indirect", 7, I8080OpInfo.OPND_RP);
-    private static final I8080OpInfo op0x1b = new I8080OpInfo("DCX", "Decrement D & E", 5, I8080OpInfo.OPND_RP);
-    private static final I8080OpInfo op0x1c = new I8080OpInfo("INR", "Increment register", 5, I8080OpInfo.OPND_R);
-    private static final I8080OpInfo op0x1d = new I8080OpInfo("DCR", "Decrement register", 5, I8080OpInfo.OPND_R);
-    private static final I8080OpInfo op0x1e = new I8080OpInfo("MVI", "Move immediate register", 7, I8080OpInfo.OPND_R_DATA);
-    private static final I8080OpInfo op0x1f = new I8080OpInfo("", "", 0, 0);
+    private static final I8080OpInfo op0x10 = new I8080OpInfo("*NOP", "", 1, 4, 4, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x11 = new I8080OpInfo("LXI", "D,d16", 3, 10, 10, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x12 = new I8080OpInfo("STAX", "D", 1, 7, 7, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x13 = new I8080OpInfo("INX", "D", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x14 = new I8080OpInfo("INR", "D", 1, 5, 5, true, true, true, true, false, "", 0);
+    private static final I8080OpInfo op0x15 = new I8080OpInfo("DCR", "D", 1, 5, 5, true, true, true, true, false, "", 0);
+    private static final I8080OpInfo op0x16 = new I8080OpInfo("MVI", "D,d8", 2, 7, 7, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x17 = new I8080OpInfo("RAL", "", 1, 4, 4, false, false, false, false, true, "", 0);
+    private static final I8080OpInfo op0x18 = new I8080OpInfo("*NOP", "", 1, 4, 4, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x19 = new I8080OpInfo("DAD", "D", 1, 10, 10, false, false, false, false, true, "", 0);
+    private static final I8080OpInfo op0x1a = new I8080OpInfo("LDAX", "D", 1, 7, 7, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x1b = new I8080OpInfo("DCX", "D", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x1c = new I8080OpInfo("INR", "E", 1, 5, 5, true, true, true, true, false, "", 0);
+    private static final I8080OpInfo op0x1d = new I8080OpInfo("DCR", "E", 1, 5, 5, true, true, true, true, false, "", 0);
+    private static final I8080OpInfo op0x1e = new I8080OpInfo("MVI", "E,d8", 2, 7, 7, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x1f = new I8080OpInfo("RAR", "", 1, 4, 4, false, false, false, false, true, "", 0);
     // 0x20-0x2f
-    private static final I8080OpInfo op0x20 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x21 = new I8080OpInfo("LXI", "Load immediate register Pair H & L", 10, I8080OpInfo.OPND_RP_DATA16);
-    private static final I8080OpInfo op0x22 = new I8080OpInfo("SHLD", "Store H & L direct", 16, I8080OpInfo.OPND_ADDR);
-    private static final I8080OpInfo op0x23 = new I8080OpInfo("INX", "Increment H & L registers", 5, I8080OpInfo.OPND_RP);
-    private static final I8080OpInfo op0x24 = new I8080OpInfo("INR", "Increment register", 5, I8080OpInfo.OPND_R);
-    private static final I8080OpInfo op0x25 = new I8080OpInfo("DCR", "Decrement register", 5, I8080OpInfo.OPND_R);
-    private static final I8080OpInfo op0x26 = new I8080OpInfo("MVI", "Move immediate register", 7, I8080OpInfo.OPND_R_DATA);
-    private static final I8080OpInfo op0x27 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x28 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x29 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x2a = new I8080OpInfo("LHLD", "Load H & L direct", 16, I8080OpInfo.OPND_ADDR);
-    private static final I8080OpInfo op0x2b = new I8080OpInfo("DCX", "Decrement H & L", 5, I8080OpInfo.OPND_RP);
-    private static final I8080OpInfo op0x2c = new I8080OpInfo("INR", "Increment register", 5, I8080OpInfo.OPND_R);
-    private static final I8080OpInfo op0x2d = new I8080OpInfo("DCR", "Decrement register", 5, I8080OpInfo.OPND_R);
-    private static final I8080OpInfo op0x2e = new I8080OpInfo("MVI", "Move immediate register", 7, I8080OpInfo.OPND_R_DATA);
-    private static final I8080OpInfo op0x2f = new I8080OpInfo("", "", 0, 0);
+    private static final I8080OpInfo op0x20 = new I8080OpInfo("*NOP", "", 1, 4, 4, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x21 = new I8080OpInfo("LXI", "H,d16", 3, 10, 10, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x22 = new I8080OpInfo("SHLD", "a16", 3, 16, 16, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x23 = new I8080OpInfo("INX", "H", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x24 = new I8080OpInfo("INR", "H", 1, 5, 5, true, true, true, true, false, "", 0);
+    private static final I8080OpInfo op0x25 = new I8080OpInfo("DCR", "H", 1, 5, 5, true, true, true, true, false, "", 0);
+    private static final I8080OpInfo op0x26 = new I8080OpInfo("MVI", "H,d8", 2, 7, 7, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x27 = new I8080OpInfo("DAA", "", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x28 = new I8080OpInfo("*NOP", "", 1, 4, 4, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x29 = new I8080OpInfo("DAD", "H", 1, 10, 10, false, false, false, false, true, "", 0);
+    private static final I8080OpInfo op0x2a = new I8080OpInfo("LHLD", "a16", 3, 16, 16, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x2b = new I8080OpInfo("DCX", "H", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x2c = new I8080OpInfo("INR", "L", 1, 5, 5, true, true, true, true, false, "", 0);
+    private static final I8080OpInfo op0x2d = new I8080OpInfo("DCR", "L", 1, 5, 5, true, true, true, true, false, "", 0);
+    private static final I8080OpInfo op0x2e = new I8080OpInfo("MVI", "L,d8", 2, 7, 7, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x2f = new I8080OpInfo("CMA", "", 1, 4, 4, false, false, false, false, false, "", 0);
     // 0x30-0x3f
-    private static final I8080OpInfo op0x30 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x31 = new I8080OpInfo("LXI", "Load immediate stack pointer", 10, I8080OpInfo.OPND_RP_DATA16);
-    private static final I8080OpInfo op0x32 = new I8080OpInfo("STA", "Store A direct", 13, I8080OpInfo.OPND_ADDR);
-    private static final I8080OpInfo op0x33 = new I8080OpInfo("INX", "Increment stack pointer", 5, I8080OpInfo.OPND_RP);
-    private static final I8080OpInfo op0x34 = new I8080OpInfo("INR", "Increment memory", 10, I8080OpInfo.OPND_R);
-    private static final I8080OpInfo op0x35 = new I8080OpInfo("DCR", "Decrement memory", 10, I8080OpInfo.OPND_R);
-    private static final I8080OpInfo op0x36 = new I8080OpInfo("MVI", "Move immediate memory", 10, I8080OpInfo.OPND_M_DATA);
-    private static final I8080OpInfo op0x37 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x38 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x39 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x3a = new I8080OpInfo("LDA", "Load A direct", 13, I8080OpInfo.OPND_ADDR);
-    private static final I8080OpInfo op0x3b = new I8080OpInfo("DCX", "Decrement stack pointer", 5, I8080OpInfo.OPND_RP);
-    private static final I8080OpInfo op0x3c = new I8080OpInfo("INR", "Increment register", 5, I8080OpInfo.OPND_R);
-    private static final I8080OpInfo op0x3d = new I8080OpInfo("DCR", "Decrement register", 5, I8080OpInfo.OPND_R);
-    private static final I8080OpInfo op0x3e = new I8080OpInfo("MVI", "Move immediate register", 7, I8080OpInfo.OPND_R_DATA);
-    private static final I8080OpInfo op0x3f = new I8080OpInfo("", "", 0, 0);
+    private static final I8080OpInfo op0x30 = new I8080OpInfo("*NOP", "", 1, 4, 4, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x31 = new I8080OpInfo("LXI", "SP,d16", 3, 10, 10, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x32 = new I8080OpInfo("STA", "a16", 3, 13, 13, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x33 = new I8080OpInfo("INX", "SP", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x34 = new I8080OpInfo("INR", "M", 1, 10, 10, true, true, true, true, false, "", 0);
+    private static final I8080OpInfo op0x35 = new I8080OpInfo("DCR", "M", 1, 10, 10, true, true, true, true, false, "", 0);
+    private static final I8080OpInfo op0x36 = new I8080OpInfo("MVI", "M,d8", 2, 10, 10, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x37 = new I8080OpInfo("STC", "", 1, 4, 4, false, false, false, false, true, "", 0);
+    private static final I8080OpInfo op0x38 = new I8080OpInfo("*NOP", "", 1, 4, 4, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x39 = new I8080OpInfo("DAD", "SP", 1, 10, 10, false, false, false, false, true, "", 0);
+    private static final I8080OpInfo op0x3a = new I8080OpInfo("LDA", "a16", 3, 13, 13, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x3b = new I8080OpInfo("DCX", "SP", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x3c = new I8080OpInfo("INR", "A", 1, 5, 5, true, true, true, true, false, "", 0);
+    private static final I8080OpInfo op0x3d = new I8080OpInfo("DCR", "A", 1, 5, 5, true, true, true, true, false, "", 0);
+    private static final I8080OpInfo op0x3e = new I8080OpInfo("MVI", "A,d8", 2, 7, 7, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x3f = new I8080OpInfo("CMC", "", 1, 4, 4, false, false, false, false, true, "", 0);
     // 0x40-0x4f
-    private static final I8080OpInfo op0x40 = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x41 = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x42 = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x43 = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x44 = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x45 = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x46 = new I8080OpInfo("MOV", "Move memory to register", 5, I8080OpInfo.OPND_R_M);
-    private static final I8080OpInfo op0x47 = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x48 = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x49 = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x4a = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x4b = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x4c = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x4d = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x4e = new I8080OpInfo("MOV", "Move memory to register", 5, I8080OpInfo.OPND_R_M);
-    private static final I8080OpInfo op0x4f = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
+    private static final I8080OpInfo op0x40 = new I8080OpInfo("MOV", "B,B", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x41 = new I8080OpInfo("MOV", "B,C", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x42 = new I8080OpInfo("MOV", "B,D", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x43 = new I8080OpInfo("MOV", "B,E", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x44 = new I8080OpInfo("MOV", "B,H", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x45 = new I8080OpInfo("MOV", "B,L", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x46 = new I8080OpInfo("MOV", "B,M", 1, 7, 7, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x47 = new I8080OpInfo("MOV", "B,A", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x48 = new I8080OpInfo("MOV", "C,B", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x49 = new I8080OpInfo("MOV", "C,C", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x4a = new I8080OpInfo("MOV", "C,D", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x4b = new I8080OpInfo("MOV", "C,E", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x4c = new I8080OpInfo("MOV", "C,H", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x4d = new I8080OpInfo("MOV", "C,L", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x4e = new I8080OpInfo("MOV", "C,M", 1, 7, 7, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x4f = new I8080OpInfo("MOV", "C,A", 1, 5, 5, false, false, false, false, false, "", 0);
     // 0x50-0x5f
-    private static final I8080OpInfo op0x50 = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x51 = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x52 = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x53 = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x54 = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x55 = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x56 = new I8080OpInfo("MOV", "Move memory to register", 5, I8080OpInfo.OPND_R_M);
-    private static final I8080OpInfo op0x57 = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x58 = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x59 = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x5a = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x5b = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x5c = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x5d = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x5e = new I8080OpInfo("MOV", "Move memory to register", 5, I8080OpInfo.OPND_R_M);
-    private static final I8080OpInfo op0x5f = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
+    private static final I8080OpInfo op0x50 = new I8080OpInfo("MOV", "D,B", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x51 = new I8080OpInfo("MOV", "D,C", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x52 = new I8080OpInfo("MOV", "D,D", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x53 = new I8080OpInfo("MOV", "D,E", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x54 = new I8080OpInfo("MOV", "D,H", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x55 = new I8080OpInfo("MOV", "D,L", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x56 = new I8080OpInfo("MOV", "D,M", 1, 7, 7, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x57 = new I8080OpInfo("MOV", "D,A", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x58 = new I8080OpInfo("MOV", "E,B", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x59 = new I8080OpInfo("MOV", "E,C", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x5a = new I8080OpInfo("MOV", "E,D", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x5b = new I8080OpInfo("MOV", "E,E", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x5c = new I8080OpInfo("MOV", "E,H", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x5d = new I8080OpInfo("MOV", "E,L", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x5e = new I8080OpInfo("MOV", "E,M", 1, 7, 7, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x5f = new I8080OpInfo("MOV", "E,A", 1, 5, 5, false, false, false, false, false, "", 0);
     // 0x60-0x6f
-    private static final I8080OpInfo op0x60 = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x61 = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x62 = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x63 = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x64 = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x65 = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x66 = new I8080OpInfo("MOV", "Move memory to register", 5, I8080OpInfo.OPND_R_M);
-    private static final I8080OpInfo op0x67 = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x68 = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x69 = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x6a = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x6b = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x6c = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x6d = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x6e = new I8080OpInfo("MOV", "Move memory to register", 5, I8080OpInfo.OPND_R_M);
-    private static final I8080OpInfo op0x6f = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
+    private static final I8080OpInfo op0x60 = new I8080OpInfo("MOV", "H,B", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x61 = new I8080OpInfo("MOV", "H,C", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x62 = new I8080OpInfo("MOV", "H,D", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x63 = new I8080OpInfo("MOV", "H,E", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x64 = new I8080OpInfo("MOV", "H,H", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x65 = new I8080OpInfo("MOV", "H,L", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x66 = new I8080OpInfo("MOV", "H,M", 1, 7, 7, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x67 = new I8080OpInfo("MOV", "H,A", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x68 = new I8080OpInfo("MOV", "L,B", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x69 = new I8080OpInfo("MOV", "L,C", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x6a = new I8080OpInfo("MOV", "L,D", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x6b = new I8080OpInfo("MOV", "L,E", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x6c = new I8080OpInfo("MOV", "L,H", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x6d = new I8080OpInfo("MOV", "L,L", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x6e = new I8080OpInfo("MOV", "L,M", 1, 7, 7, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x6f = new I8080OpInfo("MOV", "L,A", 1, 5, 5, false, false, false, false, false, "", 0);
     // 0x70-0x7f
-    private static final I8080OpInfo op0x70 = new I8080OpInfo("MOV", "Move register to memory", 5, I8080OpInfo.OPND_M_R);
-    private static final I8080OpInfo op0x71 = new I8080OpInfo("MOV", "Move register to memory", 5, I8080OpInfo.OPND_M_R);
-    private static final I8080OpInfo op0x72 = new I8080OpInfo("MOV", "Move register to memory", 5, I8080OpInfo.OPND_M_R);
-    private static final I8080OpInfo op0x73 = new I8080OpInfo("MOV", "Move register to memory", 5, I8080OpInfo.OPND_M_R);
-    private static final I8080OpInfo op0x74 = new I8080OpInfo("MOV", "Move register to memory", 5, I8080OpInfo.OPND_M_R);
-    private static final I8080OpInfo op0x75 = new I8080OpInfo("MOV", "Move register to memory", 5, I8080OpInfo.OPND_M_R);
-    private static final I8080OpInfo op0x76 = new I8080OpInfo("HLT", "Halt", 5);
-    private static final I8080OpInfo op0x77 = new I8080OpInfo("MOV", "Move register to memory", 5, I8080OpInfo.OPND_M_R);
-    private static final I8080OpInfo op0x78 = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x79 = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x7a = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x7b = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x7c = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x7d = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
-    private static final I8080OpInfo op0x7e = new I8080OpInfo("MOV", "Move memory to register", 5, I8080OpInfo.OPND_R_M);
-    private static final I8080OpInfo op0x7f = new I8080OpInfo("MOV", "Move register to register", 5, I8080OpInfo.OPND_R_R);
+    private static final I8080OpInfo op0x70 = new I8080OpInfo("MOV", "M,B", 1, 7, 7, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x71 = new I8080OpInfo("MOV", "M,C", 1, 7, 7, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x72 = new I8080OpInfo("MOV", "M,D", 1, 7, 7, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x73 = new I8080OpInfo("MOV", "M,E", 1, 7, 7, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x74 = new I8080OpInfo("MOV", "M,H", 1, 7, 7, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x75 = new I8080OpInfo("MOV", "M,L", 1, 7, 7, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x76 = new I8080OpInfo("HLT", "", 1, 7, 7, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x77 = new I8080OpInfo("MOV", "M,A", 1, 7, 7, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x78 = new I8080OpInfo("MOV", "A,B", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x79 = new I8080OpInfo("MOV", "A,C", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x7a = new I8080OpInfo("MOV", "A,D", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x7b = new I8080OpInfo("MOV", "A,E", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x7c = new I8080OpInfo("MOV", "A,H", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x7d = new I8080OpInfo("MOV", "A,L", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x7e = new I8080OpInfo("MOV", "A,M", 1, 7, 7, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0x7f = new I8080OpInfo("MOV", "A,A", 1, 5, 5, false, false, false, false, false, "", 0);
     // 0x80-0x8f
-    private static final I8080OpInfo op0x80 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x81 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x82 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x83 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x84 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x85 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x86 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x87 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x88 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x89 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x8a = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x8b = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x8c = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x8d = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x8e = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x8f = new I8080OpInfo("", "", 0, 0);
+    private static final I8080OpInfo op0x80 = new I8080OpInfo("ADD", "B", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x81 = new I8080OpInfo("ADD", "C", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x82 = new I8080OpInfo("ADD", "D", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x83 = new I8080OpInfo("ADD", "E", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x84 = new I8080OpInfo("ADD", "H", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x85 = new I8080OpInfo("ADD", "L", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x86 = new I8080OpInfo("ADD", "M", 1, 7, 7, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x87 = new I8080OpInfo("ADD", "A", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x88 = new I8080OpInfo("ADC", "B", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x89 = new I8080OpInfo("ADC", "C", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x8a = new I8080OpInfo("ADC", "D", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x8b = new I8080OpInfo("ADC", "E", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x8c = new I8080OpInfo("ADC", "H", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x8d = new I8080OpInfo("ADC", "L", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x8e = new I8080OpInfo("ADC", "M", 1, 7, 7, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x8f = new I8080OpInfo("ADC", "A", 1, 4, 4, true, true, true, true, true, "", 0);
     // 0x90-0x9f
-    private static final I8080OpInfo op0x90 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x91 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x92 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x93 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x94 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x95 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x96 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x97 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x98 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x99 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x9a = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x9b = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x9c = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x9d = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x9e = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0x9f = new I8080OpInfo("", "", 0, 0);
+    private static final I8080OpInfo op0x90 = new I8080OpInfo("SUB", "B", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x91 = new I8080OpInfo("SUB", "C", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x92 = new I8080OpInfo("SUB", "D", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x93 = new I8080OpInfo("SUB", "E", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x94 = new I8080OpInfo("SUB", "H", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x95 = new I8080OpInfo("SUB", "L", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x96 = new I8080OpInfo("SUB", "M", 1, 7, 7, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x97 = new I8080OpInfo("SUB", "A", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x98 = new I8080OpInfo("SBB", "B", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x99 = new I8080OpInfo("SBB", "C", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x9a = new I8080OpInfo("SBB", "D", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x9b = new I8080OpInfo("SBB", "E", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x9c = new I8080OpInfo("SBB", "H", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x9d = new I8080OpInfo("SBB", "L", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x9e = new I8080OpInfo("SBB", "M", 1, 7, 7, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0x9f = new I8080OpInfo("SBB", "A", 1, 4, 4, true, true, true, true, true, "", 0);
     // 0xa0-0xaf
-    private static final I8080OpInfo op0xa0 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xa1 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xa2 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xa3 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xa4 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xa5 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xa6 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xa7 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xa8 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xa9 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xaa = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xab = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xac = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xad = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xae = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xaf = new I8080OpInfo("", "", 0, 0);
+    private static final I8080OpInfo op0xa0 = new I8080OpInfo("ANA", "B", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xa1 = new I8080OpInfo("ANA", "C", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xa2 = new I8080OpInfo("ANA", "D", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xa3 = new I8080OpInfo("ANA", "E", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xa4 = new I8080OpInfo("ANA", "H", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xa5 = new I8080OpInfo("ANA", "L", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xa6 = new I8080OpInfo("ANA", "M", 1, 7, 7, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xa7 = new I8080OpInfo("ANA", "A", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xa8 = new I8080OpInfo("XRA", "B", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xa9 = new I8080OpInfo("XRA", "C", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xaa = new I8080OpInfo("XRA", "D", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xab = new I8080OpInfo("XRA", "E", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xac = new I8080OpInfo("XRA", "H", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xad = new I8080OpInfo("XRA", "L", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xae = new I8080OpInfo("XRA", "M", 1, 7, 7, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xaf = new I8080OpInfo("XRA", "A", 1, 4, 4, true, true, true, true, true, "", 0);
     // 0xb0-0xbf
-    private static final I8080OpInfo op0xb0 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xb1 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xb2 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xb3 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xb4 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xb5 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xb6 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xb7 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xb8 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xb9 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xba = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xbb = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xbc = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xbd = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xbe = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xbf = new I8080OpInfo("", "", 0, 0);
+    private static final I8080OpInfo op0xb0 = new I8080OpInfo("ORA", "B", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xb1 = new I8080OpInfo("ORA", "C", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xb2 = new I8080OpInfo("ORA", "D", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xb3 = new I8080OpInfo("ORA", "E", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xb4 = new I8080OpInfo("ORA", "H", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xb5 = new I8080OpInfo("ORA", "L", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xb6 = new I8080OpInfo("ORA", "M", 1, 7, 7, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xb7 = new I8080OpInfo("ORA", "A", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xb8 = new I8080OpInfo("CMP", "B", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xb9 = new I8080OpInfo("CMP", "C", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xba = new I8080OpInfo("CMP", "D", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xbb = new I8080OpInfo("CMP", "E", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xbc = new I8080OpInfo("CMP", "H", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xbd = new I8080OpInfo("CMP", "L", 1, 4, 4, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xbe = new I8080OpInfo("CMP", "M", 1, 7, 7, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xbf = new I8080OpInfo("CMP", "A", 1, 4, 4, true, true, true, true, true, "", 0);
     // 0xc0-0xcf
-    private static final I8080OpInfo op0xc0 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xc1 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xc2 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xc3 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xc4 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xc5 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xc6 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xc7 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xc8 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xc9 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xca = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xcb = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xcc = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xcd = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xce = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xcf = new I8080OpInfo("", "", 0, 0);
+    private static final I8080OpInfo op0xc0 = new I8080OpInfo("RNZ", "", 1, 5, 11, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xc1 = new I8080OpInfo("POP", "B", 1, 10, 10, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xc2 = new I8080OpInfo("JNZ", "a16", 3, 10, 10, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xc3 = new I8080OpInfo("JMP", "a16", 3, 10, 10, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xc4 = new I8080OpInfo("CNZ", "a16", 3, 11, 17, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xc5 = new I8080OpInfo("PUSH", "B", 1, 11, 11, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xc6 = new I8080OpInfo("ADI", "d8", 2, 7, 7, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xc7 = new I8080OpInfo("RST", "0", 1, 11, 11, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xc8 = new I8080OpInfo("RZ", "", 1, 5, 11, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xc9 = new I8080OpInfo("RET", "", 1, 10, 10, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xca = new I8080OpInfo("JZ", "a16", 3, 10, 10, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xcb = new I8080OpInfo("*JMP", "a16", 3, 10, 10, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xcc = new I8080OpInfo("CZ", "a16", 3, 11, 17, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xcd = new I8080OpInfo("CALL", "a16", 3, 17, 17, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xce = new I8080OpInfo("ACI", "d8", 2, 7, 7, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xcf = new I8080OpInfo("RST", "1", 1, 11, 11, false, false, false, false, false, "", 0);
     // 0xd0-0xdf
-    private static final I8080OpInfo op0xd0 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xd1 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xd2 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xd3 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xd4 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xd5 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xd6 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xd7 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xd8 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xd9 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xda = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xdb = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xdc = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xdd = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xde = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xdf = new I8080OpInfo("", "", 0, 0);
+    private static final I8080OpInfo op0xd0 = new I8080OpInfo("RNC", "", 1, 5, 11, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xd1 = new I8080OpInfo("POP", "D", 1, 10, 10, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xd2 = new I8080OpInfo("JNC", "a16", 3, 10, 10, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xd3 = new I8080OpInfo("OUT", "d8", 2, 10, 10, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xd4 = new I8080OpInfo("CNC", "a16", 3, 11, 17, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xd5 = new I8080OpInfo("PUSH", "D", 1, 11, 11, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xd6 = new I8080OpInfo("SUI", "d8", 2, 7, 7, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xd7 = new I8080OpInfo("RST", "2", 1, 11, 11, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xd8 = new I8080OpInfo("RC", "", 1, 5, 11, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xd9 = new I8080OpInfo("*RET", "", 1, 10, 10, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xda = new I8080OpInfo("JC", "a16", 3, 10, 10, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xdb = new I8080OpInfo("IN", "d8", 2, 10, 10, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xdc = new I8080OpInfo("CC", "a16", 3, 11, 17, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xdd = new I8080OpInfo("*CALL", "a16", 3, 17, 17, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xde = new I8080OpInfo("SBI", "d8", 2, 7, 7, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xdf = new I8080OpInfo("RST", "3", 1, 11, 11, false, false, false, false, false, "", 0);
     // 0xe0-0xef
-    private static final I8080OpInfo op0xe0 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xe1 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xe2 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xe3 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xe4 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xe5 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xe6 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xe7 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xe8 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xe9 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xea = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xeb = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xec = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xed = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xee = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xef = new I8080OpInfo("", "", 0, 0);
+    private static final I8080OpInfo op0xe0 = new I8080OpInfo("RPO", "", 1, 5, 11, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xe1 = new I8080OpInfo("POP", "H", 1, 10, 10, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xe2 = new I8080OpInfo("JPO", "a16", 3, 10, 10, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xe3 = new I8080OpInfo("XTHL", "", 1, 18, 18, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xe4 = new I8080OpInfo("CPO", "a16", 3, 11, 17, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xe5 = new I8080OpInfo("PUSH", "H", 1, 11, 11, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xe6 = new I8080OpInfo("ANI", "d8", 2, 7, 7, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xe7 = new I8080OpInfo("RST", "4", 1, 11, 11, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xe8 = new I8080OpInfo("RPE", "", 1, 5, 11, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xe9 = new I8080OpInfo("PCHL", "", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xea = new I8080OpInfo("JPE", "a16", 3, 10, 10, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xeb = new I8080OpInfo("XCHG", "", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xec = new I8080OpInfo("CPE", "a16", 3, 11, 17, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xed = new I8080OpInfo("*CALL", "a16", 3, 17, 17, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xee = new I8080OpInfo("XRI", "d8", 2, 7, 7, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xef = new I8080OpInfo("RST", "5", 1, 11, 11, false, false, false, false, false, "", 0);
     // 0xf0-0xff
-    private static final I8080OpInfo op0xf0 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xf1 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xf2 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xf3 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xf4 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xf5 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xf6 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xf7 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xf8 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xf9 = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xfa = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xfb = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xfc = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xfd = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xfe = new I8080OpInfo("", "", 0, 0);
-    private static final I8080OpInfo op0xff = new I8080OpInfo("", "", 0, 0);
+    private static final I8080OpInfo op0xf0 = new I8080OpInfo("RP", "", 1, 5, 11, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xf1 = new I8080OpInfo("POP", "PSW", 1, 10, 10, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xf2 = new I8080OpInfo("JP", "a16", 3, 10, 10, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xf3 = new I8080OpInfo("DI", "", 1, 4, 4, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xf4 = new I8080OpInfo("CP", "a16", 3, 11, 17, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xf5 = new I8080OpInfo("PUSH", "PSW", 1, 11, 11, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xf6 = new I8080OpInfo("ORI", "d8", 2, 7, 7, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xf7 = new I8080OpInfo("RST", "6", 1, 11, 11, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xf8 = new I8080OpInfo("RM", "", 1, 5, 11, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xf9 = new I8080OpInfo("SPHL", "", 1, 5, 5, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xfa = new I8080OpInfo("JM", "a16", 3, 10, 10, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xfb = new I8080OpInfo("EI", "", 1, 4, 4, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xfc = new I8080OpInfo("CM", "a16", 3, 11, 17, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xfd = new I8080OpInfo("*CALL", "a16", 3, 17, 17, false, false, false, false, false, "", 0);
+    private static final I8080OpInfo op0xfe = new I8080OpInfo("CPI", "d8", 2, 7, 7, true, true, true, true, true, "", 0);
+    private static final I8080OpInfo op0xff = new I8080OpInfo("RST", "7", 1, 11, 11, false, false, false, false, false, "", 0);
 
-    public static final I8080OpInfo[] opInfo = new I8080OpInfo[] {
+    public static final I8080OpInfo[] opCode = new I8080OpInfo[] {
         op0x00, op0x01, op0x02, op0x03, op0x04, op0x05, op0x06, op0x07, op0x08, op0x09, op0x0a, op0x0b, op0x0c, op0x0d, op0x0e, op0x0f,
         op0x10, op0x11, op0x12, op0x13, op0x14, op0x15, op0x16, op0x17, op0x18, op0x19, op0x1a, op0x1b, op0x1c, op0x1d, op0x1e, op0x1f,
         op0x20, op0x21, op0x22, op0x23, op0x24, op0x25, op0x26, op0x27, op0x28, op0x29, op0x2a, op0x2b, op0x2c, op0x2d, op0x2e, op0x2f,
