@@ -13,36 +13,49 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package spaceinvaders;
+package i8080.gui;
 
+import i8080.*;
 import java.io.BufferedInputStream;
-import java.util.Scanner;
+import javax.swing.JFrame;
 
 /**
  *
  * @author Barend Scholtus
  */
-public class SpaceInvadersEmu implements I8080Context {
+public class I8080Frame extends JFrame implements I8080Context {
 
+    public static final int RAM_SIZ = 0x2000;
+    public static final int MEMORY_SIZ = 0x4000;
     private int[] memory;
     private I8080 cpu;
     private String[] ROMfiles = new String[]{
-        "roms/invaders.h",
-        "roms/invaders.g",
-        "roms/invaders.f",
-        "roms/invaders.e"
+        "../../spaceinvaders/roms/invaders.h",
+        "../../spaceinvaders/roms/invaders.g",
+        "../../spaceinvaders/roms/invaders.f",
+        "../../spaceinvaders/roms/invaders.e"
     };
-    private static final int RAM_SIZ = 0x2000;
-    private static final int MEMORY_SIZ = 0x4000;
 
-    public SpaceInvadersEmu() {
+    public I8080Frame() {
         memory = new int[MEMORY_SIZ];
         readROMs();
         cpu = new I8080(this);
         cpu.reset();
+
+        setTitle("Intel 8080 with Space Invaders ROMs in a window");
+        I8080Panel panel = new I8080Panel(cpu, memory);
+        setContentPane(panel);
+        pack();
     }
 
-    public void readROMs() {
+    public static void main(String[] args) {
+        I8080Frame app = new I8080Frame();
+        app.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        app.setLocationRelativeTo(null);
+        app.setVisible(true);
+    }
+
+    private void readROMs() {
         byte[] bytes = new byte[0x800];
         BufferedInputStream bis;
         int memAddr = 0;
@@ -90,29 +103,20 @@ public class SpaceInvadersEmu implements I8080Context {
         }
     }
 
+    public void out(int dev, int data) {
+        System.out.printf("out dev=%d: %x (%b)\n", dev, data, data);
+    }
+
+    public int in(int dev) {
+        System.out.printf("in dev=%d: returning 0", dev);
+        return 0;
+    }
+
     public I8080 getCpu() {
         return cpu;
     }
 
     public int[] getMemory() {
         return memory;
-    }
-
-    public void runTextEmu() {
-        Scanner s = new Scanner(System.in);
-
-        System.out.println(I8080OpInfo.debugString(cpu, this));
-        for (;;) {
-            s.nextLine();
-            cpu.instruction();
-            System.out.println(I8080OpInfo.debugString(cpu, this));
-        }
-    }
-
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String[] args) {
-        new SpaceInvadersEmu().runTextEmu();
     }
 }

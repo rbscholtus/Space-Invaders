@@ -13,14 +13,14 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package spaceinvaders.gui;
+package i8080.gui;
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import javax.swing.*;
 import javax.swing.table.*;
-import spaceinvaders.*;
+import i8080.*;
 
 /**
  *
@@ -56,20 +56,30 @@ public class I8080Panel extends JPanel implements ActionListener {
         50, 40, 60, 90
     };
     private volatile Thread runToCursorThread;
-    private I8080Context ctx;
+    private I8080 cpu;
+    private int[] memory;
 
     /**
-     *
-     * @param ctx
+     * 
+     * @param cpu
+     * @param memory
      */
-    public I8080Panel(I8080Context ctx) {
-        this.ctx = ctx;
+    public I8080Panel(I8080 cpu, int[] memory) {
+        if (cpu == null) {
+            throw new IllegalArgumentException("cpu cannot be null");
+        }
+        if (memory == null) {
+            throw new IllegalArgumentException("memory cannot be null");
+        }
+
+        this.cpu = cpu;
+        this.memory = memory;
         createComponents();
         btnStep.addActionListener(this);
         btnRunTC.addActionListener(this);
         btnStop.addActionListener(this);
         btnReset.addActionListener(this);
-        tableModel.setIsRowAnOpCode(ctx.getCpu().PC());
+        tableModel.setIsRowAnOpCode(cpu.PC());
         updateDisplay();
     }
 
@@ -118,7 +128,7 @@ public class I8080Panel extends JPanel implements ActionListener {
         topPanel.add(secondPanel);
         topPanel.add(thirdPanel);
 
-        tableModel = new I8080TableModel(ctx);
+        tableModel = new I8080TableModel(memory);
         table = new JTable(tableModel);
         scrollPane = new JScrollPane(table);
 
@@ -160,8 +170,6 @@ public class I8080Panel extends JPanel implements ActionListener {
      *
      */
     private void updateDisplay() {
-        I8080 cpu = ctx.getCpu();
-
         fldPC.setText(Util.toHexString(cpu.PC(), 4));
         fldSP.setText(Util.toHexString(cpu.SP(), 4));
         fldAF.setText(Util.toHexString(cpu.AF(), 4));
@@ -184,9 +192,9 @@ public class I8080Panel extends JPanel implements ActionListener {
      *
      */
     private void reset() {
-        ctx.getCpu().reset();
+        cpu.reset();
         cycles = 0;
-        tableModel.setIsRowAnOpCode(ctx.getCpu().PC());
+        tableModel.setIsRowAnOpCode(cpu.PC());
         updateDisplay();
     }
 
@@ -198,7 +206,6 @@ public class I8080Panel extends JPanel implements ActionListener {
         Object src = e.getSource();
 
         if (src == btnStep) {
-            I8080 cpu = ctx.getCpu();
             cycles += cpu.instruction();
             tableModel.setIsRowAnOpCode(cpu.PC());
             updateDisplay();
@@ -223,8 +230,9 @@ public class I8080Panel extends JPanel implements ActionListener {
             @Override
             public void run() {
                 Thread curr = Thread.currentThread();
-                while (runToCursorThread == curr && toPC != ctx.getCpu().PC()) {
-                    cycles += ctx.getCpu().instruction();
+                while (runToCursorThread == curr && toPC != cpu.PC()) {
+                    cycles += cpu.instruction();
+                    tableModel.setIsRowAnOpCode(cpu.PC());
                     updateDisplay();
                 }
             }

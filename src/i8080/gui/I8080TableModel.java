@@ -13,17 +13,18 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package spaceinvaders.gui;
+package i8080.gui;
 
 import javax.swing.table.AbstractTableModel;
-import spaceinvaders.I8080Context;
-import spaceinvaders.I8080OpInfo;
+import i8080.*;
 
 /**
  *
  * @author Barend Scholtus
  */
 public class I8080TableModel extends AbstractTableModel {
+
+    public static final int MAX_MEM_ADDR_SHOWN = 0x2400;
 
     private int[] memory;
     private boolean[] isRowAnOpCode;
@@ -36,8 +37,8 @@ public class I8080TableModel extends AbstractTableModel {
         Integer.class, Integer.class, String.class, String.class, String.class
     };
 
-    public I8080TableModel(I8080Context ctx) {
-        this.memory = ctx.getMemory();
+    public I8080TableModel(int[] memory) {
+        this.memory = memory;
         isRowAnOpCode = new boolean[memory.length];
     }
 
@@ -46,7 +47,7 @@ public class I8080TableModel extends AbstractTableModel {
     }
 
     public int getRowCount() {
-        return memory.length;
+        return Math.min(MAX_MEM_ADDR_SHOWN, memory.length);
     }
 
     public Object getValueAt(int rowIndex, int columnIndex) {
