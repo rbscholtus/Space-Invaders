@@ -13,7 +13,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package spaceinvaders;
+package i8080;
 
 /**
  *
@@ -27,7 +27,11 @@ public interface I8080Context {
 
     public void write(int addr, int data);
 
-    public I8080 getCpu();
+    public void out(int dev, int data);
 
-    public int[] getMemory();
+    public int in(int dev);
+//
+//    public I8080 getCpu();
+//
+//    public int[] getMemory();
 }
