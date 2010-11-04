@@ -21,11 +21,13 @@ package i8080;
  */
 public interface I8080Context {
 
-    public int read(int addr);
+    public int readByte(int addr);
 
-    public int read2(int addr);
+    public int readWord(int addr);
 
-    public void write(int addr, int data);
+    public void writeByte(int addr, int data);
+
+    public void writeWord(int addr, int dataLow, int dataHigh);
 
     public void out(int dev, int data);
 

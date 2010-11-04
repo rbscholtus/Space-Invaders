@@ -89,17 +89,24 @@ public class I8080Frame extends JFrame implements I8080Context {
         assert memAddr == ROMfiles.length * 0x800 : "Loading failed.";
     }
 
-    public int read(int addr) {
+    public int readByte(int addr) {
         return addr < MEMORY_SIZ ? memory[addr] : 0;
     }
 
-    public int read2(int addr) {
+    public int readWord(int addr) {
         return addr + 1 < MEMORY_SIZ ? memory[addr] | (memory[addr + 1] << 8) : 0;
     }
 
-    public void write(int addr, int data) {
+    public void writeByte(int addr, int data) {
         if (addr >= RAM_SIZ && addr < MEMORY_SIZ) {
             memory[addr] = data;
+        }
+    }
+
+    public void writeWord(int addr, int dataLow, int dataHigh) {
+        if (addr >= RAM_SIZ && addr < MEMORY_SIZ-1) {
+            memory[addr] = dataLow;
+            memory[addr+1] = dataHigh;
         }
     }
 

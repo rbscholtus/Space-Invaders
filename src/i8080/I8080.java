@@ -36,6 +36,7 @@ public class I8080 {
     boolean Parity;
     boolean AuxCarry;
     boolean halted;
+    boolean inte;
     private I8080Context ctx;
 
     public I8080(I8080Context env) {
@@ -44,6 +45,7 @@ public class I8080 {
 
     public int reset() {
         PC = 0;
+        inte = true;
         return 3;
     }
 
@@ -80,36 +82,47 @@ public class I8080 {
         Sign = (t & 0x80) != 0;
     }
 
-    private int fetchOprnd() {
-        return ctx.read(PC++);
+//    private void writeByte(int addr, int data) {
+//        ctx.writeByte(addr, data);
+//    }
+    public int interrupt(int opcode) {
+        inte = false;
+        return execute(opcode);
     }
 
-    private int fetchOprnd2() {
-        int t = ctx.read2(PC);
-        PC += 2;
-        return t;
-    }
+    public int instructions(final int cycles) {
+        if (halted) {
+            return cycles;
+        }
 
-    private void write(int addr, int data) {
-        ctx.write(addr, data);
+        int cyclesDone = 0;
+        while (cyclesDone < cycles) {
+            cyclesDone += execute(ctx.readByte(PC++));
+        }
+
+        return cyclesDone;
     }
 
     public int instruction() {
         if (halted) {
-            return 0;
+            return 1;
         }
 
+        return execute(ctx.readByte(PC++));
+    }
+
+    private int execute(int opcode) {
         int t;
-        int opcode = ctx.read(PC++);
+
         switch (opcode) {
             case 0x00: // NOP
                 return 4;
             case 0x01: // LXI B
-                C = ctx.read(PC++);
-                B = ctx.read(PC++);
+                C = ctx.readByte(PC++);
+                B = ctx.readByte(PC++);
                 return 10;
             case 0x02: // STAX B
-                write(BC(), A);
+                ctx.writeByte(BC(), A);
                 return 7;
             case 0x03: // INX B
                 if (++C > 0xff) {
@@ -126,7 +139,7 @@ public class I8080 {
                 B = opDCR(B);
                 return 5;
             case 0x06: // MVI B
-                B = fetchOprnd();
+                B = ctx.readByte(PC++);
                 return 7;
             case 0x07: // RLC
                 Carry = (A & 0x80) != 0;
@@ -138,7 +151,7 @@ public class I8080 {
                 opDAD(BC());
                 return 10;
             case 0x0A: // LDAX B
-                A = ctx.read(BC());
+                A = ctx.readByte(BC());
                 return 7;
             case 0x0B: // DCX B
                 if (--C < 0) {
@@ -155,7 +168,7 @@ public class I8080 {
                 C = opDCR(C);
                 return 5;
             case 0x0E: // MVI C
-                C = fetchOprnd();
+                C = ctx.readByte(PC++);
                 return 7;
             case 0x0F: // RRC
                 Carry = (A & 0x1) != 0;
@@ -164,11 +177,11 @@ public class I8080 {
             case 0x10: // *NOP
                 return 4;
             case 0x11: // LXI D
-                E = ctx.read(PC++);
-                D = ctx.read(PC++);
+                E = ctx.readByte(PC++);
+                D = ctx.readByte(PC++);
                 return 10;
             case 0x12: // STAX D
-                write(DE(), A);
+                ctx.writeByte(DE(), A);
                 return 7;
             case 0x13: // INX D
                 if (++E > 0xff) {
@@ -185,7 +198,7 @@ public class I8080 {
                 D = opDCR(D);
                 return 5;
             case 0x16: // MVI D
-                D = fetchOprnd();
+                D = ctx.readByte(PC++);
                 return 7;
             case 0x17: // RAL
                 t = Carry ? 1 : 0;
@@ -198,7 +211,7 @@ public class I8080 {
                 opDAD(DE());
                 return 10;
             case 0x1A: // LDAX D
-                A = ctx.read(DE());
+                A = ctx.readByte(DE());
                 return 7;
             case 0x1B: // DCX D
                 if (--E < 0) {
@@ -215,7 +228,7 @@ public class I8080 {
                 E = opDCR(E);
                 return 5;
             case 0x1E: // MVI E
-                E = fetchOprnd();
+                E = ctx.readByte(PC++);
                 return 7;
             case 0x1F: // RAR
                 t = Carry ? 0x80 : 0;
@@ -225,13 +238,12 @@ public class I8080 {
             case 0x20: // *NOP
                 return 4;
             case 0x21: // LXI H
-                L = ctx.read(PC++);
-                H = ctx.read(PC++);
+                L = ctx.readByte(PC++);
+                H = ctx.readByte(PC++);
                 return 10;
             case 0x22: // SHLD
-                t = fetchOprnd2();
-                write(t++, L);
-                write(t, H);
+                ctx.writeWord(ctx.readWord(PC), L, H);
+                PC += 2;
                 return 16;
             case 0x23: // INX H
                 if (++L > 0xff) {
@@ -248,7 +260,7 @@ public class I8080 {
                 H = opDCR(H);
                 return 5;
             case 0x26: // MVI H
-                H = fetchOprnd();
+                H = ctx.readByte(PC++);
                 return 7;
             case 0x27: // DAA
                 opDAA();
@@ -259,9 +271,10 @@ public class I8080 {
                 opDAD(HL());
                 return 10;
             case 0x2A: // LHLD
-                t = fetchOprnd2();
-                L = ctx.read(t++);
-                H = ctx.read(t);
+                t = ctx.readWord(PC);
+                L = ctx.readByte(t++);
+                H = ctx.readByte(t);
+                PC += 2;
                 return 16;
             case 0x2B: // DCX H
                 if (--L < 0) {
@@ -278,7 +291,7 @@ public class I8080 {
                 L = opDCR(L);
                 return 5;
             case 0x2E: // MVI L
-                L = fetchOprnd();
+                L = ctx.readByte(PC++);
                 return 7;
             case 0x2F: // CMA
                 A = ~A & 0xff;
@@ -286,10 +299,13 @@ public class I8080 {
             case 0x30: // *NOP
                 return 4;
             case 0x31: // LXI SP
-                SP = fetchOprnd2();
+                SP = ctx.readWord(PC);
+                PC += 2;
+                ;
                 return 10;
             case 0x32: // STA
-                write(fetchOprnd2(), A);
+                ctx.writeByte(ctx.readWord(PC), A);
+                PC += 2;
                 return 13;
             case 0x33: // INX SP
                 ++SP;
@@ -297,14 +313,14 @@ public class I8080 {
                 return 5;
             case 0x34: // INR M
                 t = HL();
-                write(t, opINR(ctx.read(t)));
+                ctx.writeByte(t, opINR(ctx.readByte(t)));
                 return 10;
             case 0x35: // DCR M
                 t = HL();
-                write(t, opDCR(ctx.read(t)));
+                ctx.writeByte(t, opDCR(ctx.readByte(t)));
                 return 10;
             case 0x36: // MVI M
-                write(HL(), fetchOprnd());
+                ctx.writeByte(HL(), ctx.readByte(PC++));
                 return 10;
             case 0x37: // STC
                 Carry = true;
@@ -315,7 +331,8 @@ public class I8080 {
                 opDAD(SP);
                 return 10;
             case 0x3A: // LDA
-                A = ctx.read(fetchOprnd2());
+                A = ctx.readByte(ctx.readWord(PC));
+                PC += 2;
                 return 13;
             case 0x3B: // DCX SP
                 --SP;
@@ -328,7 +345,7 @@ public class I8080 {
                 A = opDCR(A);
                 return 5;
             case 0x3E: // MVI A
-                A = fetchOprnd();
+                A = ctx.readByte(PC++);
                 return 7;
             case 0x3F: // CMC
                 Carry = !Carry;
@@ -352,7 +369,7 @@ public class I8080 {
                 B = L;
                 return 5;
             case 0x46: // MOV
-                B = ctx.read(HL());
+                B = ctx.readByte(HL());
                 return 7;
             case 0x47: // MOV
                 B = A;
@@ -376,7 +393,7 @@ public class I8080 {
                 C = L;
                 return 5;
             case 0x4E: // MOV
-                C = ctx.read(HL());
+                C = ctx.readByte(HL());
                 return 7;
             case 0x4F: // MOV
                 C = A;
@@ -400,7 +417,7 @@ public class I8080 {
                 D = L;
                 return 5;
             case 0x56: // MOV
-                D = ctx.read(HL());
+                D = ctx.readByte(HL());
                 return 7;
             case 0x57: // MOV
                 D = A;
@@ -424,7 +441,7 @@ public class I8080 {
                 E = L;
                 return 5;
             case 0x5E: // MOV
-                E = ctx.read(HL());
+                E = ctx.readByte(HL());
                 return 7;
             case 0x5F: // MOV
                 E = A;
@@ -448,7 +465,7 @@ public class I8080 {
                 H = L;
                 return 5;
             case 0x66: // MOV
-                H = ctx.read(HL());
+                H = ctx.readByte(HL());
                 return 7;
             case 0x67: // MOV
                 H = A;
@@ -472,34 +489,34 @@ public class I8080 {
                 /*L = L;*/
                 return 5;
             case 0x6E: // MOV
-                L = ctx.read(HL());
+                L = ctx.readByte(HL());
                 return 7;
             case 0x6F: // MOV
                 L = A;
                 return 5;
             case 0x70: // MOV
-                write(HL(), B);
+                ctx.writeByte(HL(), B);
                 return 7;
             case 0x71: // MOV
-                write(HL(), C);
+                ctx.writeByte(HL(), C);
                 return 7;
             case 0x72: // MOV
-                write(HL(), D);
+                ctx.writeByte(HL(), D);
                 return 7;
             case 0x73: // MOV
-                write(HL(), E);
+                ctx.writeByte(HL(), E);
                 return 7;
             case 0x74: // MOV
-                write(HL(), H);
+                ctx.writeByte(HL(), H);
                 return 7;
             case 0x75: // MOV
-                write(HL(), L);
+                ctx.writeByte(HL(), L);
                 return 7;
             case 0x76: // HLT
                 halted = true;
                 return 7;
             case 0x77: // MOV
-                write(HL(), A);
+                ctx.writeByte(HL(), A);
                 return 7;
             case 0x78: // MOV
                 A = B;
@@ -520,7 +537,7 @@ public class I8080 {
                 A = L;
                 return 5;
             case 0x7E: // MOV
-                A = ctx.read(HL());
+                A = ctx.readByte(HL());
                 return 7;
             case 0x7F: // MOV
                 /*A = A;*/
@@ -544,7 +561,7 @@ public class I8080 {
                 opADD(L);
                 return 4;
             case 0x86: // ADD M
-                opADD(ctx.read(HL()));
+                opADD(ctx.readByte(HL()));
                 return 7;
             case 0x87: // ADD A
                 opADD(A);
@@ -568,7 +585,7 @@ public class I8080 {
                 opADC(L);
                 return 4;
             case 0x8E: // ADC M
-                opADC(ctx.read(HL()));
+                opADC(ctx.readByte(HL()));
                 return 7;
             case 0x8F: // ADC A
                 opADC(A);
@@ -592,7 +609,7 @@ public class I8080 {
                 opSUB(L);
                 return 4;
             case 0x96: // SUB M
-                opSUB(ctx.read(HL()));
+                opSUB(ctx.readByte(HL()));
                 return 7;
             case 0x97: // SUB A
                 opSUB(A);
@@ -616,7 +633,7 @@ public class I8080 {
                 opSBB(L);
                 return 4;
             case 0x9E: // SBB M
-                opSBB(ctx.read(HL()));
+                opSBB(ctx.readByte(HL()));
                 return 7;
             case 0x9F: // SBB A
                 opSBB(A);
@@ -640,7 +657,7 @@ public class I8080 {
                 opANA(L);
                 return 4;
             case 0xA6: // ANA M
-                opANA(ctx.read(HL()));
+                opANA(ctx.readByte(HL()));
                 return 7;
             case 0xA7: // ANA A
                 opANA(A);
@@ -664,7 +681,7 @@ public class I8080 {
                 opXRA(L);
                 return 4;
             case 0xAE: // XRA M
-                opXRA(ctx.read(HL()));
+                opXRA(ctx.readByte(HL()));
                 return 7;
             case 0xAF: // XRA A
                 opXRA(A);
@@ -688,7 +705,7 @@ public class I8080 {
                 opORA(L);
                 return 4;
             case 0xB6: // ORA M
-                opORA(ctx.read(HL()));
+                opORA(ctx.readByte(HL()));
                 return 7;
             case 0xB7: // ORA A
                 opORA(A);
@@ -712,7 +729,7 @@ public class I8080 {
                 opCMP(L);
                 return 4;
             case 0xBE: // CMP M
-                opCMP(ctx.read(HL()));
+                opCMP(ctx.readByte(HL()));
                 return 7;
             case 0xBF: // CMP A
                 opCMP(A);
@@ -720,21 +737,23 @@ public class I8080 {
             case 0xC0: // RNZ
                 return opRET(!Zero);
             case 0xC1: // POP B
-                C = ctx.read(SP++);
-                B = ctx.read(SP++);
+                C = ctx.readByte(SP++);
+                B = ctx.readByte(SP++);
                 return 10;
             case 0xC2: // JNZ
                 return opJMP(!Zero);
             case 0xC3: // JMP
-                return opJMP(true);
+                PC = ctx.readWord(PC);
+                return 10;
+//                return opJMP(true);
             case 0xC4: // CNZ
                 return opCALL(!Zero);
             case 0xC5: // PUSH B
-                write(--SP, B);
-                write(--SP, C);
+                ctx.writeByte(--SP, B);
+                ctx.writeByte(--SP, C);
                 return 11;
             case 0xC6: // ADI
-                opADD(fetchOprnd());
+                opADD(ctx.readByte(PC++));
                 return 7;
             case 0xC7: // RST 0
                 opRST(0x00);
@@ -742,19 +761,21 @@ public class I8080 {
             case 0xC8: // RZ
                 return opRET(Zero);
             case 0xC9: // RET
-                PC = ctx.read2(SP);
+                PC = ctx.readWord(SP);
                 SP += 2;
                 return 10;
             case 0xCA: // JZ
                 return opJMP(Zero);
             case 0xCB: // JMP
-                return opJMP(true);
+                PC = ctx.readWord(PC);
+                return 10;
+//                return opJMP(true);
             case 0xCC: // CZ
                 return opCALL(Zero);
             case 0xCD: // CALL
                 return opCALL(true);
             case 0xCE: // ACI
-                opADC(fetchOprnd());
+                opADC(ctx.readByte(PC++));
                 return 7;
             case 0xCF: // RST 1
                 opRST(0x08);
@@ -762,22 +783,22 @@ public class I8080 {
             case 0xD0: // RNC
                 return opRET(!Carry);
             case 0xD1: // POP D
-                E = ctx.read(SP++);
-                D = ctx.read(SP++);
+                E = ctx.readByte(SP++);
+                D = ctx.readByte(SP++);
                 return 10;
             case 0xD2: // JNC
                 return opJMP(!Carry);
             case 0xD3: // OUT
-                ctx.out(fetchOprnd(), A);
+                ctx.out(ctx.readByte(PC++), A);
                 return 10;
             case 0xD4: // CNC
                 return opCALL(!Carry);
             case 0xD5: // PUSH D
-                write(--SP, D);
-                write(--SP, E);
+                ctx.writeByte(--SP, D);
+                ctx.writeByte(--SP, E);
                 return 11;
             case 0xD6: // SUI
-                opSUB(fetchOprnd());
+                opSUB(ctx.readByte(PC++));
                 return 7;
             case 0xD7: // RST 2
                 opRST(0x10);
@@ -785,20 +806,20 @@ public class I8080 {
             case 0xD8: // RC
                 return opRET(Carry);
             case 0xD9: // RET
-                PC = ctx.read2(SP);
+                PC = ctx.readWord(SP);
                 SP += 2;
                 return 10;
             case 0xDA: // JC
                 return opJMP(Carry);
             case 0xDB: // IN
-                A = ctx.in(fetchOprnd());
+                A = ctx.in(ctx.readByte(PC++));
                 return 10;
             case 0xDC: // CC
                 return opCALL(Carry);
             case 0xDD: // CALL
                 return opCALL(true);
             case 0xDE: // SBI
-                opSBB(fetchOprnd());
+                opSBB(ctx.readByte(PC++));
                 return 7;
             case 0xDF: // RST 3
                 opRST(0x18);
@@ -806,8 +827,8 @@ public class I8080 {
             case 0xE0: // RPO
                 return opRET(!Parity);
             case 0xE1: // POP H
-                L = ctx.read(SP++);
-                H = ctx.read(SP++);
+                L = ctx.readByte(SP++);
+                H = ctx.readByte(SP++);
                 return 10;
             case 0xE2: // JPO
                 return opJMP(!Parity);
@@ -817,11 +838,11 @@ public class I8080 {
             case 0xE4: // CPO
                 return opCALL(!Parity);
             case 0xE5: // PUSH H
-                write(--SP, H);
-                write(--SP, L);
+                ctx.writeByte(--SP, H);
+                ctx.writeByte(--SP, L);
                 return 11;
             case 0xE6: // ANI
-                opANA(fetchOprnd());
+                opANA(ctx.readByte(PC++));
                 return 7;
             case 0xE7: // RST 4
                 opRST(0x20);
@@ -841,7 +862,7 @@ public class I8080 {
             case 0xED: // CALL
                 return opCALL(true);
             case 0xEE: // XRI
-                opXRA(fetchOprnd());
+                opXRA(ctx.readByte(PC++));
                 return 7;
             case 0xEF: // RST 5
                 opRST(0x28);
@@ -849,21 +870,22 @@ public class I8080 {
             case 0xF0: // RP
                 return opRET(!Sign);
             case 0xF1: // POP PSW
-                setConditionBits(ctx.read(SP++));
-                A = ctx.read(SP++);
+                setConditionBits(ctx.readByte(SP++));
+                A = ctx.readByte(SP++);
                 return 10;
             case 0xF2: // JP
                 return opJMP(!Sign);
             case 0xF3:
-                throw new RuntimeException("Opcode not emulated: " + opcode);
+                inte = false;
+                return 4;
             case 0xF4: // CP
                 return opCALL(!Sign);
             case 0xF5: // PUSH PSW
-                write(--SP, A);
-                write(--SP, getConditionBits());
+                ctx.writeByte(--SP, A);
+                ctx.writeByte(--SP, getConditionBits());
                 return 11;
             case 0xF6: // ORI
-                opORA(fetchOprnd());
+                opORA(ctx.readByte(PC++));
                 return 7;
             case 0xF7: // RST 6
                 opRST(0x30);
@@ -876,13 +898,14 @@ public class I8080 {
             case 0xFA: // JM
                 return opJMP(Sign);
             case 0xFB:
-                throw new RuntimeException("Opcode not emulated: " + opcode);
+                inte = true;
+                return 4;
             case 0xFC: // CM
                 return opCALL(Sign);
             case 0xFD: // CALL
                 return opCALL(true);
             case 0xFE: // CPI
-                opCMP(fetchOprnd());
+                opCMP(ctx.readByte(PC++));
                 return 7;
             case 0xFF: // RST 7
                 opRST(0x38);
@@ -890,13 +913,11 @@ public class I8080 {
             default:
                 throw new RuntimeException("opcode " + opcode + " does not exist");
         }
-
-        //return I8080OpInfo.opCode[opcode].cyclesShort;
     }
 
-    private int opJMP(boolean cond) {
+    private int opJMP(final boolean cond) {
         if (cond) {
-            PC = ctx.read2(PC);
+            PC = ctx.readWord(PC);
             return 10;
         } else {
             PC += 2;
@@ -904,11 +925,13 @@ public class I8080 {
         }
     }
 
-    private int opCALL(boolean cond) {
+    private int opCALL(final boolean cond) {
         if (cond) {
-            write(--SP, (PC + 2) >>> 8);
-            write(--SP, (PC + 2) & 0xff);
-            PC = ctx.read2(PC);
+//            ctx.writeByte(--SP, (PC + 2) >>> 8);
+//            ctx.writeByte(--SP, (PC + 2) & 0xff);
+            SP -= 2;
+            ctx.writeWord(SP, (PC + 2) & 0xff, (PC + 2) >>> 8);
+            PC = ctx.readWord(PC);
             return 17;
         } else {
             PC += 2;
@@ -916,15 +939,15 @@ public class I8080 {
         }
     }
 
-    private void opRST(int exp) {
-        write(--SP, (PC >>> 8));
-        write(--SP, (PC & 0xff));
+    private void opRST(final int exp) {
+        ctx.writeByte(--SP, (PC >>> 8));
+        ctx.writeByte(--SP, (PC & 0xff));
         PC = exp;
     }
 
-    private int opRET(boolean cond) {
+    private int opRET(final boolean cond) {
         if (cond) {
-            PC = ctx.read2(SP);
+            PC = ctx.readWord(SP);
             SP += 2;
             return 11;
         } else {
@@ -934,11 +957,11 @@ public class I8080 {
 
     private void opXTHL() {
         int t = L;
-        L = ctx.read(SP);
-        write(SP, t);
+        L = ctx.readByte(SP);
+        ctx.writeByte(SP, t);
         t = H;
-        H = ctx.read(SP + 1);
-        write(SP + 1, t);
+        H = ctx.readByte(SP + 1);
+        ctx.writeByte(SP + 1, t);
     }
 
     private void opXCHG() {
@@ -950,17 +973,18 @@ public class I8080 {
         E = t;
     }
 
-    private void setSZPFrom(int val) {
-        Sign = (val & 0x80) != 0;
-        Zero = val == 0;
-        Parity = evenParity(val);
-    }
+//    private void setSZPFrom(final int val) {
+//        Sign = (val & 0x80) != 0;
+//        Zero = (val == 0);
+//        Parity = evenParity[val];
+////        Parity = evenParity(val);
+//    }
 
     private void opDAD(int other) {
-        int t = other + HL();
-        Carry = (t & 0x10000) != 0;
-        H = (t >>> 8) & 0xff;
-        L = t & 0xff;
+        other += HL();
+        Carry = (other & 0x10000) != 0;
+        H = (other >>> 8) & 0xff;
+        L = other & 0xff;
     }
 
     private void opDAA() {
@@ -974,14 +998,20 @@ public class I8080 {
             A &= 0x0f;
             Carry = true;
         }
-        setSZPFrom(A);
+//        setSZPFrom(A);
+        Sign = (A & 0x80) != 0;
+        Zero = (A == 0);
+        Parity = evenParity[A];
     }
 
     private int opINR(int reg) {
         ++reg;
         reg &= 0xff;
         AuxCarry = (reg & 0xf) == 0;
-        setSZPFrom(reg);
+//        setSZPFrom(reg);
+        Sign = (reg & 0x80) != 0;
+        Zero = (reg == 0);
+        Parity = evenParity[reg];
         return reg;
     }
 
@@ -989,58 +1019,93 @@ public class I8080 {
         --reg;
         reg &= 0xff;
         AuxCarry = (reg & 0xf) == 0xf;
-        setSZPFrom(reg);
+        Sign = (reg & 0x80) != 0;
+        Zero = (reg == 0);
+        Parity = evenParity[reg];
+//        setSZPFrom(reg);
         return reg;
     }
 
-    private void opADD(int reg) {
+    private void opADD(final int reg) {
         int t = A + reg;
         Carry = (t & 0x100) != 0;
-        AuxCarry = ((A^t^reg) & 0x10) != 0;
-        setSZPFrom(A = t & 0xff);
+        AuxCarry = ((A ^ t ^ reg) & 0x10) != 0;
+        A = t & 0xff;
+//        setSZPFrom(A);
+        Sign = (A & 0x80) != 0;
+        Zero = (A == 0);
+        Parity = evenParity[A];
     }
 
-    private void opADC(int reg) {
+    private void opADC(final int reg) {
         int t = A + reg + (Carry ? 1 : 0);
         Carry = (t & 0x100) != 0;
-        AuxCarry = ((A^t^reg) & 0x10) != 0;
-        setSZPFrom(A = t & 0xff);
+        AuxCarry = ((A ^ t ^ reg) & 0x10) != 0;
+        A = t & 0xff;
+//        setSZPFrom(A);
+        Sign = (A & 0x80) != 0;
+        Zero = (A == 0);
+        Parity = evenParity[A];
     }
 
-    private void opSUB(int reg) {
+    private void opSUB(final int reg) {
         int t = A - reg;
         Carry = (t & 0x100) != 0;
-        AuxCarry = ((A^t^reg) & 0x10) != 0;
-        setSZPFrom(A = t & 0xff);
+        AuxCarry = ((A ^ t ^ reg) & 0x10) != 0;
+        A = t & 0xff;
+//        setSZPFrom(A);
+        Sign = (A & 0x80) != 0;
+        Zero = (A == 0);
+        Parity = evenParity[A];
     }
-    
-    private void opSBB(int reg) {
+
+    private void opSBB(final int reg) {
         int t = A - reg - (Carry ? 1 : 0);
         Carry = (t & 0x100) != 0;
-        AuxCarry = ((A^t^reg) & 0x10) != 0;
-        setSZPFrom(A = t & 0xff);
+        AuxCarry = ((A ^ t ^ reg) & 0x10) != 0;
+        A = t & 0xff;
+//        setSZPFrom(A);
+        Sign = (A & 0x80) != 0;
+        Zero = (A == 0);
+        Parity = evenParity[A];
     }
 
-    private void opANA(int reg) {
-        setSZPFrom(A &= reg);
+    private void opANA(final int reg) {
+        A &= reg;
+        Sign = (A & 0x80) != 0;
+        Zero = (A == 0);
+        Parity = evenParity[A];
+//        Parity = evenParity(A);
+//        setSZPFrom(A);
         Carry = false;
     }
 
-    private void opXRA(int reg) {
-        setSZPFrom(A ^= reg);
+    private void opXRA(final int reg) {
+        A ^= reg;
+//        setSZPFrom(A);
+        Sign = (A & 0x80) != 0;
+        Zero = (A == 0);
+        Parity = evenParity[A];
         Carry = false;
     }
 
-    private void opORA(int reg) {
-        setSZPFrom(A |= reg);
+    private void opORA(final int reg) {
+        A |= reg;
+//        setSZPFrom(A);
+        Sign = (A & 0x80) != 0;
+        Zero = (A == 0);
+        Parity = evenParity[A];
         Carry = false;
     }
 
-    private void opCMP(int reg) {
+    private void opCMP(final int reg) {
         int t = A - reg;
         Carry = (t & 0x100) != 0;
-        AuxCarry = ((A^t^reg) & 0x10) != 0;
-        setSZPFrom(t&0xff);
+        AuxCarry = ((A ^ t ^ reg) & 0x10) != 0;
+        t &= 0xff;
+        Sign = (t & 0x80) != 0;
+        Zero = (t == 0);
+        Parity = evenParity[t];
     }
 
     public final int PC() {
@@ -1077,7 +1142,26 @@ public class I8080 {
      * @param val the value for which to determine whether it has even parity
      * @return true if val has even parity
      */
-    public static boolean evenParity(int val) {
-        return (0x6996 >> ((val ^ (val >> 4)) & 0xF) & 1) == 0;
-    }
+//    public static boolean evenParity(int val) {
+//        return (0x6996 >> ((val ^ (val >> 4)) & 0xF) & 1) == 0;
+//    }
+
+    public static final boolean[] evenParity = {
+        true, false, false, true, false, true, true, false, false, true, true, false, true, false, false, true,
+        false, true, true, false, true, false, false, true, true, false, false, true, false, true, true, false,
+        false, true, true, false, true, false, false, true, true, false, false, true, false, true, true, false,
+        true, false, false, true, false, true, true, false, false, true, true, false, true, false, false, true,
+        false, true, true, false, true, false, false, true, true, false, false, true, false, true, true, false,
+        true, false, false, true, false, true, true, false, false, true, true, false, true, false, false, true,
+        true, false, false, true, false, true, true, false, false, true, true, false, true, false, false, true,
+        false, true, true, false, true, false, false, true, true, false, false, true, false, true, true, false,
+        false, true, true, false, true, false, false, true, true, false, false, true, false, true, true, false,
+        true, false, false, true, false, true, true, false, false, true, true, false, true, false, false, true,
+        true, false, false, true, false, true, true, false, false, true, true, false, true, false, false, true,
+        false, true, true, false, true, false, false, true, true, false, false, true, false, true, true, false,
+        true, false, false, true, false, true, true, false, false, true, true, false, true, false, false, true,
+        false, true, true, false, true, false, false, true, true, false, false, true, false, true, true, false,
+        false, true, true, false, true, false, false, true, true, false, false, true, false, true, true, false,
+        true, false, false, true, false, true, true, false, false, true, true, false, true, false, false, true
+    };
 }

@@ -160,7 +160,7 @@ public class I8080OpInfo {
         StringBuilder sb = new StringBuilder(80);
         Formatter f = new Formatter(sb);
 
-        I8080OpInfo op = opCode[ctx.read(cpu.PC)];
+        I8080OpInfo op = opCode[ctx.readByte(cpu.PC)];
 
         f.format("PC=%04x SP=%04x A=%02x B=%02x C=%02x D=%02x E=%02x H=%02x L=%02x %d%d%d%d%d op:%5s %s",
                 cpu.PC, cpu.SP,
