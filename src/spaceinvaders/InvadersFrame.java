@@ -18,9 +18,8 @@ package spaceinvaders;
 import i8080.*;
 import java.awt.*;
 import java.awt.event.*;
-import java.awt.image.BufferedImage;
-import java.awt.image.DataBufferInt;
-import java.awt.image.WritableRaster;
+import java.awt.event.KeyEvent;
+import java.awt.image.*;
 import java.io.BufferedInputStream;
 
 /**
@@ -32,7 +31,7 @@ public class InvadersFrame extends AnimationFrame implements I8080Context {
     public static final int MEMORY_SIZ = 0x4000;
     private int[] memory;
     private I8080 cpu;
-    private int cycles;
+//    private int cycles;
     public static final int cyclesPerFrame = 2000000 / 60;
     public static final int halfCyclesPerFrame = cyclesPerFrame / 2;
     private String[] ROMfiles = new String[]{
@@ -44,12 +43,12 @@ public class InvadersFrame extends AnimationFrame implements I8080Context {
     private BufferedImage canvas;
 //    private WritableRaster raster;
     private int[] pixels;
-    public static final int SI_WIDTH  = 224;
+    public static final int SI_WIDTH = 224;
     public static final int SI_HEIGHT = 256;
-    public static final int SI_WHITE  = 0xffffff;
-    public static final int SI_RED    = 0xff0000;
-    public static final int SI_GREEN  = 0x00ff00;
-    public static final int SI_BLACK  = 0x000000;
+    public static final int SI_WHITE = 0xffffff;
+    public static final int SI_RED = 0xff0000;
+    public static final int SI_GREEN = 0x00ff00;
+    public static final int SI_BLACK = 0x000000;
 
     public static void main(String[] args) {
         final InvadersFrame f = new InvadersFrame();
@@ -72,6 +71,18 @@ public class InvadersFrame extends AnimationFrame implements I8080Context {
             public void windowOpened(WindowEvent e) {
                 Insets ins = getInsets();
                 setSize(SI_WIDTH + ins.left + ins.right, SI_HEIGHT + ins.top + ins.bottom);
+            }
+        });
+        addKeyListener(new KeyAdapter() {
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+                keypress(e);
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+                keyrelease(e);
             }
         });
         setDisplayStats(true);
@@ -106,7 +117,7 @@ public class InvadersFrame extends AnimationFrame implements I8080Context {
             memory[addr] = data;
         } else if (addr < 0x4000) {
             memory[addr] = data;
-            setPixels(addr-0x2400, data);
+            setPixels(addr - 0x2400, data);
         } else {
             memory[addr - 0x2000] = data;
         }
@@ -121,14 +132,105 @@ public class InvadersFrame extends AnimationFrame implements I8080Context {
             memory[addr - 0x1fff] = dataHigh;
         }
     }
+    private int shiftReg;
+    private int shift;
 
     public void out(int dev, int data) {
 //        System.out.printf("out dev=%d: %x (%b)\n", dev, data, data);
+        switch (dev) {
+            case 2:
+                shift = 8-data;
+                break;
+            case 4:
+                shiftReg >>>= 8;
+                shiftReg |= (data << 8);
+                break;
+        }
     }
 
+    private int in1 = 0x00;
+    private int in2 = 0x00;
+// For in2
+//    /** 0x00:3, 0x01:4, 0x02:5, 0x03:6 */
+//    private int numberOfLives = 0x00;
+//    /** 0x00:1500 0x08:1000 */
+//    private int bonusLifeAt = 0x00;
+//    /** dipswitch coin info: 0x00:on 0x80:off */
+//    private int coinInfo = 0x00;
+
     public int in(int dev) {
-//        System.out.printf("in dev=%d: returning 0", dev);
+        switch (dev) {
+            case 1:
+                int ret = in1;
+                in1 &= 0xfe;
+                return ret;
+            case 2:
+                return in2;
+            case 3:
+                return (shiftReg >>> shift) & 0xff;
+        }
         return 0;
+    }
+
+    private void keypress(KeyEvent e) {
+        switch (e.getKeyCode()) {
+            case KeyEvent.VK_5:
+                in1 |= 0x01;
+                break;
+            case KeyEvent.VK_2:
+                in1 |= 0x02;
+                break;
+            case KeyEvent.VK_1:
+                in1 |= 0x04;
+                break;
+            case KeyEvent.VK_UP:
+                in1 |= 0x10;
+                break;
+            case KeyEvent.VK_LEFT:
+                in1 |= 0x20;
+                break;
+            case KeyEvent.VK_RIGHT:
+                in1 |= 0x40;
+                break;
+            case KeyEvent.VK_NUMPAD8:
+                in2 |= 0x10;
+                break;
+            case KeyEvent.VK_NUMPAD4:
+                in2 |= 0x20;
+                break;
+            case KeyEvent.VK_NUMPAD6:
+                in2 |= 0x40;
+                break;
+        }
+    }
+
+    private void keyrelease(KeyEvent e) {
+        switch (e.getKeyCode()) {
+            case KeyEvent.VK_2:
+                in1 &= ~0x02;
+                break;
+            case KeyEvent.VK_1:
+                in1 &= ~0x04;
+                break;
+            case KeyEvent.VK_UP:
+                in1 &= ~0x10;
+                break;
+            case KeyEvent.VK_LEFT:
+                in1 &= ~0x20;
+                break;
+            case KeyEvent.VK_RIGHT:
+                in1 &= ~0x40;
+                break;
+            case KeyEvent.VK_NUMPAD8:
+                in2 &= ~0x10;
+                break;
+            case KeyEvent.VK_NUMPAD4:
+                in2 &= ~0x20;
+                break;
+            case KeyEvent.VK_NUMPAD6:
+                in2 &= ~0x40;
+                break;
+        }
     }
 
     private void setPixels(int offset, int data) {
