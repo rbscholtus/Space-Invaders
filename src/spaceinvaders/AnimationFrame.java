@@ -28,7 +28,7 @@ public abstract class AnimationFrame extends Frame implements Runnable {
     // the thread that manages the animation cycle
     private volatile Thread bgThread;
     // number of frames per second
-    private float fps;
+    private double fps;
     // the time for one frame (in nanos)
     private long frameTimeNanos;
     // throttle the fps
@@ -58,7 +58,7 @@ public abstract class AnimationFrame extends Frame implements Runnable {
      * Creates a new animated Frame that animates fps frames per second.
      * @param fps
      */
-    public AnimationFrame(float fps) {
+    public AnimationFrame(double fps) {
         if (fps <= 0) {
             throw new IllegalArgumentException("fps must be > 0");
         }
@@ -208,7 +208,7 @@ public abstract class AnimationFrame extends Frame implements Runnable {
      * Returns the fps of the animation.
      * @return fps
      */
-    public float getFps() {
+    public double getFps() {
         return fps;
     }
 
@@ -216,9 +216,9 @@ public abstract class AnimationFrame extends Frame implements Runnable {
      * Sets the fps. The animation keeps running.
      * @param fps the new fps
      */
-    public void setFps(float fps) {
+    public void setFps(double fps) {
         this.fps = fps;
-        frameTimeNanos = (long) (1000000000 / fps);
+        frameTimeNanos = (long) (1000000000.0 / fps);
     }
 
     /**
