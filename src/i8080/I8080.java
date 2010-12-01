@@ -82,9 +82,6 @@ public class I8080 {
         Sign = (t & 0x80) != 0;
     }
 
-//    private void writeByte(int addr, int data) {
-//        ctx.writeByte(addr, data);
-//    }
     public int interrupt(int opcode) {
         inte = false;
         return execute(opcode);
@@ -111,7 +108,7 @@ public class I8080 {
         return execute(ctx.readByte(PC++));
     }
 
-    private int execute(int opcode) {
+    private int execute(final int opcode) {
         int t;
 
         switch (opcode) {
@@ -973,13 +970,6 @@ public class I8080 {
         E = t;
     }
 
-//    private void setSZPFrom(final int val) {
-//        Sign = (val & 0x80) != 0;
-//        Zero = (val == 0);
-//        Parity = evenParity[val];
-////        Parity = evenParity(val);
-//    }
-
     private void opDAD(int other) {
         other += HL();
         Carry = (other & 0x10000) != 0;
@@ -998,7 +988,6 @@ public class I8080 {
             A &= 0x0f;
             Carry = true;
         }
-//        setSZPFrom(A);
         Sign = (A & 0x80) != 0;
         Zero = (A == 0);
         Parity = evenParity[A];
@@ -1008,7 +997,6 @@ public class I8080 {
         ++reg;
         reg &= 0xff;
         AuxCarry = (reg & 0xf) == 0;
-//        setSZPFrom(reg);
         Sign = (reg & 0x80) != 0;
         Zero = (reg == 0);
         Parity = evenParity[reg];
@@ -1022,7 +1010,6 @@ public class I8080 {
         Sign = (reg & 0x80) != 0;
         Zero = (reg == 0);
         Parity = evenParity[reg];
-//        setSZPFrom(reg);
         return reg;
     }
 
@@ -1031,7 +1018,6 @@ public class I8080 {
         Carry = (t & 0x100) != 0;
         AuxCarry = ((A ^ t ^ reg) & 0x10) != 0;
         A = t & 0xff;
-//        setSZPFrom(A);
         Sign = (A & 0x80) != 0;
         Zero = (A == 0);
         Parity = evenParity[A];
@@ -1042,7 +1028,6 @@ public class I8080 {
         Carry = (t & 0x100) != 0;
         AuxCarry = ((A ^ t ^ reg) & 0x10) != 0;
         A = t & 0xff;
-//        setSZPFrom(A);
         Sign = (A & 0x80) != 0;
         Zero = (A == 0);
         Parity = evenParity[A];
@@ -1053,7 +1038,6 @@ public class I8080 {
         Carry = (t & 0x100) != 0;
         AuxCarry = ((A ^ t ^ reg) & 0x10) != 0;
         A = t & 0xff;
-//        setSZPFrom(A);
         Sign = (A & 0x80) != 0;
         Zero = (A == 0);
         Parity = evenParity[A];
@@ -1064,7 +1048,6 @@ public class I8080 {
         Carry = (t & 0x100) != 0;
         AuxCarry = ((A ^ t ^ reg) & 0x10) != 0;
         A = t & 0xff;
-//        setSZPFrom(A);
         Sign = (A & 0x80) != 0;
         Zero = (A == 0);
         Parity = evenParity[A];
@@ -1075,14 +1058,11 @@ public class I8080 {
         Sign = (A & 0x80) != 0;
         Zero = (A == 0);
         Parity = evenParity[A];
-//        Parity = evenParity(A);
-//        setSZPFrom(A);
         Carry = false;
     }
 
     private void opXRA(final int reg) {
         A ^= reg;
-//        setSZPFrom(A);
         Sign = (A & 0x80) != 0;
         Zero = (A == 0);
         Parity = evenParity[A];
@@ -1091,7 +1071,6 @@ public class I8080 {
 
     private void opORA(final int reg) {
         A |= reg;
-//        setSZPFrom(A);
         Sign = (A & 0x80) != 0;
         Zero = (A == 0);
         Parity = evenParity[A];

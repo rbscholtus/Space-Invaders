@@ -32,8 +32,4 @@ public interface I8080Context {
     public void out(int dev, int data);
 
     public int in(int dev);
-//
-//    public I8080 getCpu();
-//
-//    public int[] getMemory();
 }

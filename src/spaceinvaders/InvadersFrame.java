@@ -171,7 +171,8 @@ public class InvadersFrame extends AnimationFrame implements I8080Context {
             memory[addr] = data;
             setPixels(addr - 0x2400, data);
         } else {
-            memory[addr - 0x2000] = data;
+            addr = 0x2000 | (addr & 0x3ff);
+            memory[addr] = data;
         }
     }
 
