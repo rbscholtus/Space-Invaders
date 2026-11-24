@@ -531,9 +531,18 @@ their licence and source, like Chippie's test-suite ROMs.
 The original monitor is black and white. Coloured cellophane strips on the
 screen tint parts of it: a **red** strip near the top (where the UFO flies)
 and a **green** strip at the bottom (shields and player), including the
-lives area at the bottom left. In the Java version: red for screen rows
-32–63, green for rows 184–239, and green for row 240+ when x is 16–133.
-⚠ verify against photos of real cabinets and MAME's artwork.
+lives area at the bottom left. From MAME's `layout/invaders.lay` (CC0), in
+screen pixels:
+
+| Strip | Columns | Rows | Lit pixels multiplied by (R, G, B) |
+|---|---|---|---|
+| Red | 0–223 | 32–61 | 1, 0.125, 0.125 |
+| Green | 0–223 | 184–239 | 0.125, 1, 0.125 |
+| Green (lives) | 16–133 | 240–255 | 0.125, 1, 0.125 |
+
+The strips are tints, not pure colours: they let a little of the other
+colours through. The Java version had the red strip at rows 32–63. Until
+the shaders (M5), `internal/app/overlay` paints the picture on the CPU.
 
 The overlay is a small texture (or a list of rectangles) sampled by the
 shader, so a different overlay (e.g. the Taito version's) is data, not code.
@@ -578,16 +587,17 @@ starting point, adjusted for a rotated, vertical picture.
 | `2` | 2P start |
 | `←` `→` (or `A` `D`) | Move |
 | `Space` (or `↑`, `W`) | Fire |
-| `T` | Tilt |
+| `T` | Tilt (not wired on the Midway board, §7.2; for testing) |
 | `P` | Pause |
 | `V` | Switch view |
 | `F1` | Stats overlay |
 
 **Coins:**
 
-- A coin is a pulse: `Update` clears port 1 bit 0 (active low, §7.2) for a
-  few frames (⚠ tune; the game adds a credit on the falling edge), then sets
-  it again. Holding
+- A coin is a pulse: each new press of the coin key closes the coin switch
+  (port 1 bit 0 reads 0, §7.2) for 5 frames (`input.CoinFrames`); the game
+  adds the credit on the first. Holding the key inserts one coin
+  (`TestROMCoinNeedsAnEdge`). Holding
   the key inserts one coin; each new press inserts another.
 - In cabinet view, the coin slot on the coin door is clickable/tappable, with
   a short coin-drop animation and sound.
