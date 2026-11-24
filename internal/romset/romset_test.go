@@ -182,3 +182,60 @@ func TestRealROMs(t *testing.T) {
 		t.Errorf("image is %d bytes, want 8192", len(image))
 	}
 }
+
+// TestZipAmongFiles: a dropped or picked invaders.zip arrives as a file
+// among others; its entries are scanned like loose files.
+func TestZipAmongFiles(t *testing.T) {
+	t.Parallel()
+
+	z := zipOf(t, map[string][]byte{"fake.a": chipA, "fake.b": chipB})
+
+	image, err := romset.Load(fakeSet(), fstest.MapFS{"set.zip": {Data: z}, "notes.txt": {Data: []byte("hi")}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !bytes.Equal(image, wantImage()) {
+		t.Errorf("image % X, want % X", image, wantImage())
+	}
+
+	// Only one level: a zip inside the zip is not opened.
+	outer := zipOf(t, map[string][]byte{"inner.zip": z})
+	if _, err := romset.Load(fakeSet(), fstest.MapFS{"outer.zip": {Data: outer}}); !errors.Is(err, romset.ErrNotAROMSet) {
+		t.Errorf("nested zip: err = %v, want ErrNotAROMSet", err)
+	}
+
+	// A file that starts like a zip but isn't one is an error, named.
+	_, err = romset.Load(fakeSet(), fstest.MapFS{"broken.zip": {Data: []byte("PK\x03\x04 not really")}})
+	if err == nil || !strings.Contains(err.Error(), "broken.zip") {
+		t.Errorf("broken zip: err = %v, want it to name broken.zip", err)
+	}
+}
+
+// TestFiles: picked files, loose or a zip, load like a folder.
+func TestFiles(t *testing.T) {
+	t.Parallel()
+
+	for name, files := range map[string]map[string][]byte{
+		"loose files": {"fake.a": chipA, "renamed.bin": chipB},
+		"a zip":       {"set.zip": zipOf(t, map[string][]byte{"fake.a": chipA, "fake.b": chipB})},
+	} {
+		image, err := romset.Load(fakeSet(), romset.Files(files))
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+
+		if !bytes.Equal(image, wantImage()) {
+			t.Errorf("%s: image % X", name, image)
+		}
+	}
+}
+
+// TestFilesIsAnFS checks romset.Files against the io/fs rules.
+func TestFilesIsAnFS(t *testing.T) {
+	t.Parallel()
+
+	if err := fstest.TestFS(romset.Files(map[string][]byte{"a.bin": chipA, "b.zip": {1, 2}}), "a.bin", "b.zip"); err != nil {
+		t.Error(err)
+	}
+}
