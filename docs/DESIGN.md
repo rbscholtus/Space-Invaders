@@ -45,8 +45,9 @@ Remove the mark once checked, and cite the source.
 - **Correct emulation.** The Intel 8080 passes the standard CPU exercisers
   (§15), and the board behaves as the Midway hardware does: shift register,
   ports, interrupts on the right scanlines, coin and DIP switches.
-- **Sound without samples.** The analog sound circuits are imitated with
-  synthesis (§14), so no recordings need to be hosted.
+- **Sound without samples.** The analog sound circuits are emulated from
+  their component values (a port of MAME's circuit models, §14), so no
+  recordings need to be hosted.
 - **No ROMs hosted.** Players bring their own ROM set; the site never serves
   or downloads it (§9). Without ROMs, a CPU-test demo runs instead.
 - **Retro presentation.** A 1978 upright arcade cabinet, with the colour
@@ -68,7 +69,7 @@ Rescue, Space Invaders Part II, ...), save states, a debugger UI (§3), netplay.
 | CPU core | A fresh Go 8080 in `internal/i8080`, written against the Intel manual and the exercisers, not translated line by line from the Java (§3). |
 | ROMs | Bring your own: drop a MAME `invaders.zip` or the four files; checked by CRC-32; kept in IndexedDB (browser) or a user folder (desktop). An optional link to an external page the player opens themselves. Never hosted or fetched by us. |
 | No-ROM mode | A CPU-test demo: the 8080 exerciser (GPL) running on the cabinet screen (§9.4). |
-| Sound | Synthesised from models of each analog circuit (§14). No samples. |
+| Sound | MAME's circuit models of the sound board, ported to Go (§14). No samples. |
 | Look | Upright cabinet with all decorations; "screen" view (screen + overlay + moon) on small screens, or when chosen (§11). |
 | Art | Original artwork only. Nothing copied from Taito/Midway cabinet art, marquee or backdrop (§12). |
 | Debugger | No GUI. A headless trace tool and an on-screen stats overlay instead (§3). |
@@ -647,63 +648,104 @@ debugging aid; the real cabinet had no tilt.
 
 ## 14. Sound
 
-### 14.1 Why synthesis, not samples
+### 14.1 Approach: port MAME's circuit models
 
-The original sounds are made by analog circuits on the sound board (Midway's
-discrete circuits, and an SN76477 sound chip for the UFO only: MAME's
-`invaders_audio_device::p1_w` drives the SN76477 from port 3 bit 0 and
-everything else from discrete circuits). MAME historically used recorded samples, then modelled the circuits.
+The sounds are made by analog circuits on the sound board: six discrete
+circuits (op-amps, 555 timers, RC filters, a noise generator) and an SN76477
+sound chip for the UFO (MAME `mw8080bw_a.cpp`, `invaders_audio_device::p1_w`).
+There are no recordings in the machine; the circuits *are* the sounds.
 
-| Approach | Pros | Cons |
+| Approach | Ease | Faithful | Testable | Performance | Hosting |
+|---|---|---|---|---|---|
+| Samples (the Java version, most hobby emulators, MAME before 2007) | Easiest | One board's recording, but fixed: loops and retriggers audibly, can't follow the circuit | Hard | Trivial | **Can't host the recordings**; players would need a second file set |
+| Hand-tuned synthesis | Medium | As good as the tuning | Nothing objective to compare with | Trivial | Ours |
+| **Port of MAME's circuit models** (chosen) | Medium–hard: ~2,000 lines | High: the schematic's component values and MAME's models | Against MAME's output, nearly sample for sample | Small (§16) | Ours (BSD-3, credited) |
+| Circuit simulation (SPICE-like, MAME's netlist, MiSTer's analog work) | Hard | Highest in theory | Fragile numerics | Heavy, risky in WASM | Ours |
+
+**Why:** MAME has modelled this board's circuits since 2007 (D. Renaud, from
+the Midway schematics M051-00739-A005/B005; the noise clock was breadboarded
+and measured), and its code is BSD-3-Clause like ours
+(`src/mame/midw8080/mw8080bw_a.cpp`, `src/devices/sound/disc_*.hxx`,
+`disc_dev.hxx`, `sn76477.cpp`). Porting it gives faithful sound without
+sample files, and MAME itself becomes a repeatable reference (§14.5). The
+ported files keep MAME's copyright lines.
+
+**How others do it:** most hobby emulators and tutorials play recorded WAV
+samples, usually supplied by the player for copyright reasons; MAME did too
+until 2007, and old forks (MAME 2003) still do. MiSTer's FPGA core has
+simplified built-in sound and a "samples" variant. Samples are the easy
+route when the CPU and video are the focus.
+
+### 14.2 The circuits
+
+From MAME's `mw8080bw_a.cpp` (invaders section, Midway board values):
+
+| Sound | Trigger | Circuit (MAME blocks) |
 |---|---|---|
-| Samples (Java version) | Exact recordings | Recordings' rights are unclear and can't be hosted; samples need files the player must find; looping and retriggering artefacts; fixed pitch and length |
-| Circuit simulation (SPICE-like) | Most faithful | Large, slow in WASM, hard to get right |
-| **Synthesis models** (chosen) | Small, no files, tunable, deterministic and testable | Must be tuned by ear against references |
-
-Each sound gets a small model built from what its circuit does: oscillators,
-noise, filters and envelopes. Pure Go in `internal/synth`, no dependencies.
-
-### 14.2 The sounds
-
-| Sound | Trigger | Circuit behaviour to imitate |
-|---|---|---|
-| UFO | Port 3 bit 0, while held | A tone whose pitch is swept up and down by a slow oscillator, repeating (the SN76477's VCO driven by its SLF) |
-| Shot | Port 3 bit 1, rising edge | A short noise-based "pew": filtered noise with a falling pitch/brightness |
-| Player dies | Port 3 bit 2, rising edge | A longer noise explosion with a decaying envelope |
-| Invader dies | Port 3 bit 3, rising edge | A short noise burst with a fast decay |
-| Extended play | Port 3 bit 4, rising edge | A short tone (bonus life) |
-| Fleet notes 1–4 | Port 5 bits 0–3, rising edge | Four low "thump" tones, falling in pitch, each with a quick decay; the game plays them in a loop, faster as invaders die |
-| UFO hit | Port 5 bit 4, rising edge | A tone sweep for the score display |
-
-All of this is ⚠ verify: take frequencies, time constants and filter
-values from the schematics (component values give RC times and oscillator
-rates) and MAME's audio code, then compare against reference recordings.
+| Noise | always running | 17-bit LFSR clocked at 7515 Hz (`LFSR_NOISE`, `midway_lfsr`), used by the shot and the player's explosion |
+| UFO | port 3 bit 0, while 1 | SN76477: VCO swept by its SLF (super-low-frequency oscillator), VCO mode 1, enabled while the bit is 1 |
+| Shot | port 3 bit 1 | Norton op-amp one-shot → integrator → op-amp VCO (falling pitch) mixed with filtered noise → triggered VCA |
+| Player dies | port 3 bit 2 | One-shot → triggered VCA on the noise → two RC low-pass filters |
+| Invader dies | port 3 bit 3 | One-shot → integrator → op-amp oscillator → VCO → op-amp |
+| Extended play | port 3 bit 4 | 555 astable (about 7 Hz, reset by the bit) AND a 480 Hz square wave |
+| Fleet notes 1–4 | port 5 bits 0–3 | The note bits pick resistors (`COMP_ADDER`) for a 555 astable → two RC filters: the "thump" |
+| UFO hit | port 5 bit 4 | Integrator → op-amp oscillator → VCO → op-amp |
+| Mix | — | Op-amp mixer of the six discrete circuits; MAME's output gain 2500, then discrete and SN76477 at 0.5 each |
+| Mute | port 3 bit 5 = 0 | All sound off (MAME `system_mute`) |
 
 ### 14.3 Rules
 
-- **Edges, not levels.** A one-shot sound starts on the bit's 0→1 change
-  and plays its envelope to the end; the game holding the bit doesn't restart
-  it. The UFO tone plays while its bit is 1.
+- **Edges come from the circuits.** The one-shots trigger on a bit's rising
+  edge, as the hardware does; holding a bit doesn't restart a sound. The UFO
+  plays while its bit is 1; extended play while bit 4 is 1.
 - **Amplifier enable** (port 3 bit 5): 0 mutes the output (the game turns it
-  off in attract mode).
+  off in attract mode). The synth starts muted (port 3 = 0), so there is no
+  power-on thump; MAME, which starts unmuted, plays one while its circuits
+  charge.
 - **Sample-accurate timing.** The board records every port 3/5 write that
   changes a bit as `(cycle, port, value)` in a preallocated per-frame list
-  (64 entries; a frame with more keeps the latest value in the last one);
-  the synth starts each sound at the matching sample. The cycle is when the
-  `OUT` instruction begins, at most 10 cycles (5 µs) before the write:
-  under a quarter of a sample at 48 kHz.
-- **Deterministic:** the noise generator is a seeded LFSR (like the real noise
-  source), so tests can compare rendered audio exactly.
+  (64 entries; a frame with more keeps the latest value in the last one).
+  `app/sound` turns the cycle into a sample offset, `cycle × 800 / 33,536`,
+  and the synth applies the write at that sample (±1 sample, 21 µs). The
+  cycle is when the `OUT` instruction begins, at most 10 cycles (5 µs) before
+  the write.
+- **Real time, not game time.** The circuits run at the audio sample rate,
+  so pitches are right even though the game runs 0.8% fast (§8); only the
+  fleet's march is 0.8% quicker.
+- **Deterministic:** the noise is an LFSR, as on the board, so renders can be
+  compared exactly.
 
 ### 14.4 Audio output
 
-- Ebitengine's `audio` package, 48 kHz, a `io.Reader` stream fed by
+- Ebitengine's `audio` package, 48 kHz, an `io.Reader` stream fed by
   `app/sound` from the synth's output (float32, mono → stereo).
 - One emulated frame renders 800 samples (48,000 / 60), matching `Update`'s
-  rate (§8), so the buffer stays level. Small corrections (±1 sample) keep
-  it from slowly filling or emptying.
-- The audio context is created on the first user gesture (coin, start,
-  click), as browsers require. Volume and mute are settings.
+  rate (§8). A small buffer between the game loop and the audio player is
+  kept at about 3 frames (50 ms): when it drifts, one sample is dropped or
+  repeated. `Update` never blocks.
+- Volume and mute: `-volume`, keys (§13), later settings. In the browser,
+  the audio context starts on the first user gesture (M4).
+
+### 14.5 Testing against references
+
+1. **The schematic's maths:** each building block is tested against its
+   textbook behaviour: 555 frequency `1.44 / ((R1 + 2·R2)·C)`, RC step
+   response, LFSR sequence, oscillator frequencies, one-shot lengths.
+2. **MAME's output, sound by sound:** `scripts/mame-reference.sh` runs MAME
+   with a Lua script that writes the sound ports during attract mode, when
+   the game writes none (checked: the golden session has no sound events
+   before the first game), and records each sound to a WAV file with
+   `-wavwrite`. The WAVs stay local (git-ignored): they are renderings of
+   Taito's sound design. `cmd/soundref` measures them (loudness envelope,
+   pitch and spectral centroid per 10 ms, duration) and the measurements
+   are committed; CI compares our synth with them. Locally, with the WAVs
+   present, the waveforms themselves are compared (correlation).
+3. **MAME's output for the whole golden session** (local): the same script
+   in Lua, compared with our session by per-window features.
+4. **Real cabinets** (recordings, videos): for listening only. Components
+   vary 5–20% between boards, and speakers and rooms colour the sound.
+5. **Our own renders:** hashes per sound, regenerated with `-update`, which
+   also writes WAVs to listen to (git-ignored).
 
 ## 15. Testing
 
@@ -764,10 +806,10 @@ exercisers in a separate step without it.
 
 ### 15.4 Sound tests
 
-The synth renders each sound for a fixed seed; tests check duration, peak
-level, silence after the envelope, and that the amplifier bit mutes. Exact
-waveforms are compared against committed goldens (our own synthesis, so no
-rights issue), regenerated with `-update` and checked by ear in the PR.
+See §14.5: block tests against the schematic's maths, circuit tests against
+committed measurements of MAME's output (local waveform comparison when the
+reference WAVs exist), hashes of our own renders, and a local comparison of
+the golden session with MAME's. `Render` must not allocate.
 
 ### 15.5 Browser tests (Playwright)
 

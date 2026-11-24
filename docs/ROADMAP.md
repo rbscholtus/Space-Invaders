@@ -46,8 +46,14 @@ Milestones for the Go version. The design is in [DESIGN.md](DESIGN.md).
 
 ## M3: Sound
 
-- `internal/synth`: the seven sounds (§14), tuned against references.
-- Audio output, amplifier enable, volume.
+- Reference tooling: MAME records each sound (Lua + `-wavwrite`, local);
+  `cmd/soundref` commits measurements (DESIGN §14.5).
+- `internal/synth`: MAME's circuit building blocks, the six discrete
+  circuits, the SN76477 for the UFO, the mixer and mute, ported to Go and
+  tested against the schematic's maths and MAME's output.
+- `internal/app/sound`: audio output at 48 kHz, events at the right sample,
+  volume and mute.
+- A local comparison of the golden session with MAME's.
 
 ## M4: Browser and GitHub Pages
 
