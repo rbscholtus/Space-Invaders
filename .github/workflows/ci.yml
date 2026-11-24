@@ -45,7 +45,11 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Test (race)
-        run: go test -race -coverpkg=./... -coverprofile=coverage.out ./...
+        run: go test -race -short -coverpkg=./... -coverprofile=coverage.out ./...
+      # 8080EXM runs 23.8 billion cycles: ~30 s natively, far longer with
+      # -race, and the CPU has no concurrency to race on (DESIGN §15.2).
+      - name: CPU exercisers
+        run: go test -run 'Test8080' ./internal/cpm
       - name: Coverage summary
         run: |
           {

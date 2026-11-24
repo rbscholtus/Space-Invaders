@@ -30,6 +30,10 @@ linters:
             - "**/internal/cpm/**"
             - "**/internal/synth/**"
             - "!$test"
+          # invaders and cpm build on the CPU (DESIGN §4); the more specific
+          # allow wins over the github.com deny below.
+          allow:
+            - github.com/rbscholtus/Space-Invaders/internal/i8080
           deny:
             - pkg: syscall/js
               desc: "the core is platform-free; syscall/js lives only in internal/platform/"
@@ -47,6 +51,14 @@ linters:
               desc: "the core imports only the standard library"
             - pkg: golang.org
               desc: "the core imports only the standard library"
+        leaves:
+          list-mode: lax
+          files:
+            - "**/internal/i8080/**"
+            - "**/internal/synth/**"
+          deny:
+            - pkg: github.com/rbscholtus/Space-Invaders
+              desc: "i8080 and synth import nothing from this module (CONTRIBUTING)"
         no-ebiten:
           list-mode: lax
           files:
@@ -94,8 +106,9 @@ linters:
       - linters: [gosec]
         path: internal/(i8080|invaders|cpm)/
         text: G115
-      # Table-driven tests are long and keep their tables and flags at package level.
-      - linters: [funlen, gochecknoglobals, goconst]
+      # Table-driven tests are long, with one case per line, and keep their
+      # tables and flags at package level.
+      - linters: [funlen, gochecknoglobals, goconst, lll]
         path: _test\.go$
 
 formatters:

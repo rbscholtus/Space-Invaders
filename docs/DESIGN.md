@@ -234,7 +234,8 @@ packages needs `-coverpkg=./...` (set in `scripts/` and CI).
   17/11 for `Ccc`). Jumps take 10 cycles either way.
 - **Flags as a byte.** Keep `F` as the real PSW byte (bit 1 always 1, bits 3
   and 5 always 0), so `PUSH PSW`/`POP PSW` and the exercisers' CRCs come out
-  right without conversion. Parity from a 256-entry table.
+  right without conversion. Parity from `math/bits.OnesCount8` (itself a
+  256-entry table).
 - **Undocumented opcodes** behave as on a real 8080: `0x08 0x10 0x18 0x20
   0x28 0x30 0x38` are `NOP`, `0xCB` is `JMP`, `0xD9` is `RET`, `0xDD 0xED
   0xFD` are `CALL`.
@@ -266,7 +267,10 @@ func (c *CPU) Step() int                    // one instruction (or 4 idle cycles
 func (c *CPU) Run(cycles int) int           // until at least `cycles` have run; returns the overshoot
 func (c *CPU) Interrupt(opcode byte) bool   // RST n from the bus; false if interrupts are off
 func (c *CPU) EnableTrace(n int)            // ring buffer, allocated once
-func Disassemble(mem []byte, pc uint16) (text string, length int)
+func (c *CPU) Trace() []State               // the last n states, oldest first
+func (c *CPU) Snapshot() State              // registers, flags and the bytes at PC
+func Op(op byte) OpInfo                     // mnemonic, length, cycles (taken/not)
+func Disassemble(mem []byte, pc uint16) (string, int)
 ```
 
 ### 6.3 Interrupts
@@ -277,7 +281,9 @@ and jumps to `n*8` (11 cycles). When they're disabled, the request is
 ignored; Space Invaders keeps them enabled except in short critical sections,
 and the board re-raises its request each frame anyway. `EI` takes effect
 after the *next* instruction (so `EI; RET` returns before an interrupt is
-taken). ⚠ verify the `EI` delay against the Intel manual and the exercisers.
+taken). ⚠ verify the `EI` delay against the Intel manual: implemented and
+tested (`TestEIDelay`), but the exercisers don't cover it, and the scanned
+manual found online has no text layer to check it against.
 
 ## 7. The Space Invaders board
 
@@ -638,14 +644,15 @@ package provides exactly that.
 
 | Program | What it checks | Licence | Use |
 |---|---|---|---|
-| `8080PRE.COM` (Ian Bartholomew, 2009) | Basic instructions, as a precondition | GPL v2 (from Frank Cringle's zexlax) ⚠ verify | Committed in `third_party/`, CI |
-| `8080EXM.COM` (same) | Every instruction group, all flags, against CRCs from a real 8080 | GPL v2 ⚠ verify | Committed, CI (`-short` skips it); also the demo (§9.4) |
+| `8080PRE.COM` (Ian Bartholomew, 2009) | Basic instructions, as a precondition | GPL v2 or later (Frank Cringle's `prelim.z80`; stated in the `.MAC` header) | Committed in `third_party/`, CI |
+| `8080EXM.COM` (same) | Every instruction group, all flags, against CRCs from a real 8080 | GPL v2 or later (Frank Cringle's `zexlax.z80`; stated in the `.MAC` header) | Committed, CI (`-short` skips it); also the demo (§9.4) |
 | `TST8080.COM` (Microcosm Associates, 1980) | Diagnostic | Unclear | Only if the licence is verified; otherwise downloaded by a dev tool, not committed |
 | `CPUTEST.COM` (SuperSoft, 1981) | Diagnostic | Commercial | Not committed; optional local run |
 
 The tests compare the full printed output with a golden text file. `8080EXM`
-runs a few billion cycles: the test is part of the normal suite but skipped
-with `-short`, and should finish in well under a minute natively ⚠ measure.
+runs 23.8 billion cycles (about 45 minutes on a real 8080 at 2 MHz): the test
+is part of the normal suite but skipped with `-short`. Natively it takes
+about 27 s (Apple M-series, Go 1.27.4, about 870 MHz emulated).
 
 ### 15.3 Board tests and golden frames
 
