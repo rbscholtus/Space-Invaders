@@ -41,6 +41,11 @@ presented as an upright arcade cabinet. A port of the 2010 Java version in
   DESIGN §15.2). Never weaken a golden (text, frame or audio) to make a test
   pass. Fix the emulator, or explain in the PR why the golden was wrong.
 - **The user prefers clarifying questions** before big or ambiguous changes.
+- **Lessons so far** are in CONTRIBUTING (Tests, Ebitengine rules, Git) and
+  DESIGN §7.6 (what the game does). In short: `go test ./pkg -update` (the
+  package before the flag); no `ebitenutil`; check facts in the game code
+  or by running it, not from memory; local reference PDFs in `docs/` are
+  git-ignored.
 - **Name issues and PRs in full** when writing to the user, in commits and
   in PRs: say whether it's an issue or a PR, and name the repository when
   it isn't this one, e.g. "Chippie PR #20", "Space-Invaders issue #3". A
