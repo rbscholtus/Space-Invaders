@@ -1,0 +1,4 @@
+# Third-party files are kept byte-for-byte as published (CRLF sources, .COM
+# binaries), so their SHA-256s match the README next to them.
+third_party/** -text
+internal/*/testdata/*.golden -text

@@ -135,8 +135,9 @@ Go file is `assets/assets.go`, which embeds the data around it (DESIGN §5).
 - **Browser tests** (`e2e/`, Playwright): allow for software rendering in CI.
 - **Coverage:** `internal/i8080/` aims for 95%+ line coverage. Coverage is
   reported in CI (`-coverpkg=./...`), not enforced.
-- **Before pushing:** `go test -race ./...` (native), the WASM build, and the
-  native build all pass.
+- **Before pushing:** `go test ./...` and `go test -race -short ./...`
+  (native), the WASM build, and the native build all pass. 8080EXM is
+  skipped under `-short`, because it takes many minutes with `-race`.
 
 ## Assets
 

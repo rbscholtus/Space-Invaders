@@ -15,12 +15,14 @@ Milestones for the Go version. The design is in [DESIGN.md](DESIGN.md).
   and WASM builds; `govulncheck` for both builds.
 - Dependabot for Go modules and GitHub Actions.
 
-## M1: The 8080
+## M1: The 8080 ✅
 
 - `internal/i8080`: all 256 opcodes, flags, cycles, interrupts, `HLT`.
 - Opcode table and disassembler; `cmd/trace`.
 - `internal/cpm` and `cmd/cputest`; `8080PRE` and `8080EXM` pass.
-- Verify the licences of the exercisers; commit them in `third_party/`.
+- Licences of the exercisers verified (GPL v2 or later); committed in
+  `third_party/`.
+- Still open: verify the `EI` delay in the Intel manual (DESIGN §6.3).
 
 ## M2: The board, on the desktop
 
