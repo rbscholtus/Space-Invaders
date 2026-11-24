@@ -24,6 +24,35 @@ func newBoard(t *testing.T, dips invaders.DIPs, code map[uint16][]byte) *invader
 	return b
 }
 
+// TestSetInputsAt: inputs set for a line take effect there, mid-frame: a
+// program reading port 1 in a loop sees the coin go in at that line.
+func TestSetInputsAt(t *testing.T) {
+	t.Parallel()
+
+	// LXI H,2100H; loop: IN 1; MOV M,A; INX H; JMP loop (the reads land in RAM).
+	b := newBoard(t, invaders.DIPs{}, map[uint16][]byte{
+		0x0000: {0x21, 0x00, 0x21, 0xDB, 0x01, 0x77, 0x23, 0xC3, 0x03, 0x00},
+	})
+	b.SetInputsAt(100, invaders.Inputs{Coin: true})
+	b.RunFrame()
+
+	// 32 cycles per read (IN 10, MOV 7, INX 5, JMP 10): the coin (bit 0
+	// low) appears 100 lines in.
+	firstCoin := -1
+
+	for i := range 0x1000 {
+		if b.Read(uint16(0x2100+i))&0x01 == 0 {
+			firstCoin = i
+
+			break
+		}
+	}
+
+	if want := 100 * invaders.CyclesPerLine / 32; firstCoin < want-1 || firstCoin > want+1 {
+		t.Errorf("coin first read at read %d, want about %d (line 100)", firstCoin, want)
+	}
+}
+
 func TestROMSize(t *testing.T) {
 	t.Parallel()
 

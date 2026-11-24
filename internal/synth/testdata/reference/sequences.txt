@@ -4,8 +4,8 @@
 #   sound <name> <frames>     a sequence and its length in frames
 #   <frame> <port> <value>    write value to port in that frame's callback
 #
-# MAME's Lua frame callback runs a frame late: a write listed at frame f takes
-# effect at the end of frame f + 1 (soundref.Write.Sample).
+# MAME runs the frame callback for frame f at the start of its vertical blank,
+# (f + 1) frame periods after power-on (soundref.Write.Sample).
 #
 # Frames are MAME's video frames, 59.54 per second (DESIGN §8). The game writes
 # no sound ports in attract mode, so these writes play each sound on its own.

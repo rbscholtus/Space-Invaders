@@ -6,6 +6,9 @@
 # measure them into the committed .json files.
 #
 #   MAME_ROMPATH=~/mame/roms scripts/mame-reference.sh [sound ...]
+#
+# "session" records the golden session's script (scripts/mame/session.lua)
+# to wav/session.wav, for the local session check.
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -28,6 +31,16 @@ mkdir -p "$ref/wav"
 
 for sound in "${sounds[@]}"; do
   echo "recording $sound"
+  if [ "$sound" = session ]; then
+    (
+      cd "$ref/wav"
+      "$mame" invaders -rompath "$rompath" -samplerate 48000 \
+        -video none -sound none -nothrottle -skip_gameinfo -seconds_to_run 420 \
+        -autoboot_script "$root/scripts/mame/session.lua" \
+        -wavwrite session.wav >/dev/null
+    )
+    continue
+  fi
   # The Lua script ends the run after the sequence; -seconds_to_run is a
   # safety stop (frames at 59.54 Hz, plus a margin).
   frames=$(awk -v s="$sound" '$1 == "sound" && $2 == s { print $3 }' "$ref/sequences.txt")

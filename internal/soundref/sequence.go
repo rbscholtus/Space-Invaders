@@ -16,10 +16,10 @@ const FrameRate = 19968000.0 / 4 / 320 / 262
 // ErrSpec is returned for a malformed sequence spec.
 var ErrSpec = errors.New("bad sequence spec")
 
-// Write is one port write in a sequence. MAME's Lua frame callback runs a
-// frame late: a write listed at frame f takes effect at the end of frame
-// f + 1 (measured with MAME 0.289: the frame-150 write happens at
-// 2.536026 s, the end of frame 151). Sample returns that moment.
+// Write is one port write in a sequence, made in MAME's Lua frame callback
+// for frame f. MAME runs that callback at the start of the frame's vertical
+// blank, (f + 1) frame periods after power-on (measured with MAME 0.289: the
+// frame-150 write happens at 2.536026 s). Sample returns that moment.
 type Write struct {
 	Frame int
 	Port  byte

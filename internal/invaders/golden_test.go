@@ -26,8 +26,8 @@ var update = flag.Bool("update", false, "rewrite the golden hashes (and write PN
 // Only the hashes are committed; the pictures are Taito's. Local only:
 // skipped without your own ROMs.
 const (
-	goldenFrames = 24000 // 6 min 40 s of game time
-	goldenEvery  = 30    // a checkpoint every half second
+	goldenFrames = testrig.ScriptFrames // 6 min 40 s of game time
+	goldenEvery  = 30                   // a checkpoint every half second
 	goldenPath   = "testdata/golden/session.txt"
 	pngDir       = "testdata/golden/png" // written by -update; git-ignored
 	failureDir   = "testdata/failures"   // written on a mismatch; git-ignored
@@ -42,50 +42,6 @@ const (
 	score1Addr   = 0x20F8 // player 1's score, BCD, low byte first
 	score2Addr   = 0x20FC // player 2's score
 )
-
-// The session's script, in frames (60 per second):
-//
-//	0–5399       attract mode, 90 s: the whole attract cycle with its demo
-//	5400–5604    three coins
-//	5700         1P start; from 6000 the player sweeps left and right and
-//	             fires, until all ships are lost (about frame 9100)
-//	11400        2P start with the two remaining credits; both players
-//	             play the same way until game over (about frame 20500)
-//	to 23999     attract mode again
-const (
-	firstCoin   = 5400
-	coinGap     = 100
-	coins       = 3
-	start1Frame = 5700
-	playFrom    = 6000
-	start2Frame = 11400
-	pressFrames = 5  // how long a coin or start button is held
-	sweepFrames = 45 // frames moving one way
-	fireEvery   = 16 // frames between presses of fire
-	fireFrames  = 2
-)
-
-// script returns the inputs held at frame f.
-func script(f int) invaders.Inputs {
-	var in invaders.Inputs
-
-	for c := range coins {
-		if start := firstCoin + c*coinGap; f >= start && f < start+pressFrames {
-			in.Coin = true
-		}
-	}
-
-	in.Start1 = f >= start1Frame && f < start1Frame+pressFrames
-	in.Start2 = f >= start2Frame && f < start2Frame+pressFrames
-
-	if f >= playFrom {
-		in.Right = (f/sweepFrames)%2 == 0
-		in.Left = !in.Right
-		in.Fire = f%fireEvery < fireFrames
-	}
-
-	return in
-}
 
 // checkpoint is one line of the golden file.
 type checkpoint struct {
@@ -129,7 +85,7 @@ func runSession(t *testing.T) ([]checkpoint, [][]byte, phases) {
 	ev := make([]byte, 6)
 
 	for f := range goldenFrames {
-		b.SetInputs(script(f))
+		b.SetInputs(testrig.Script(f))
 		b.RunFrame()
 
 		for _, e := range b.SoundEvents() {
