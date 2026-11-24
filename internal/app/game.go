@@ -9,6 +9,7 @@ import (
 
 	"github.com/rbscholtus/Space-Invaders/internal/app/input"
 	"github.com/rbscholtus/Space-Invaders/internal/app/overlay"
+	"github.com/rbscholtus/Space-Invaders/internal/app/sound"
 	"github.com/rbscholtus/Space-Invaders/internal/invaders"
 )
 
@@ -18,13 +19,29 @@ const (
 
 	// pausedDim is the brightness of the picture while paused.
 	pausedDim = 0.4
+	// volumeStep is how much the volume keys change the volume.
+	volumeStep = 0.1
 )
+
+// Options are the player's settings.
+type Options struct {
+	Volume float64 // 0–1
+	// OnError is told about problems that don't stop the game, such as
+	// no audio device (the game then runs silently).
+	OnError func(error)
+}
 
 // Game implements ebiten.Game.
 type Game struct {
 	board    *invaders.Board
 	controls input.Controls
 	painter  *overlay.Painter
+	settings Options
+
+	frames     *sound.Frames
+	stream     *sound.Stream
+	output     sound.Output
+	audioTried bool
 
 	screen  []byte // the picture, 1 byte per pixel
 	rgba    []byte // the coloured picture
@@ -41,15 +58,18 @@ type Game struct {
 }
 
 // New returns a Game running board.
-func New(board *invaders.Board) *Game {
+func New(board *invaders.Board, opts Options) *Game {
 	return &Game{
-		board:   board,
-		painter: overlay.NewPainter(overlay.Midway()),
-		screen:  make([]byte, screenW*screenH),
-		rgba:    make([]byte, screenW*screenH*4),
-		picture: ebiten.NewImage(screenW, screenH),
-		dirty:   true,
-		scale:   1,
+		board:    board,
+		settings: opts,
+		frames:   sound.NewFrames(),
+		stream:   sound.NewStream(opts.Volume),
+		painter:  overlay.NewPainter(overlay.Midway()),
+		screen:   make([]byte, screenW*screenH),
+		rgba:     make([]byte, screenW*screenH*4),
+		picture:  ebiten.NewImage(screenW, screenH),
+		dirty:    true,
+		scale:    1,
 	}
 }
 
@@ -68,12 +88,12 @@ func keys() input.Keys {
 	}
 }
 
-// Update runs one emulated frame (DESIGN §8), unless paused: by the player,
-// or because the window isn't in front.
+// Update runs one emulated frame (DESIGN §8) and its sound (§14.4),
+// unless paused: by the player, or because the window isn't in front.
+// While paused nothing is rendered, so the sound falls silent.
 func (g *Game) Update() error {
-	if inpututil.IsKeyJustPressed(ebiten.KeyP) {
-		g.paused = !g.paused
-	}
+	g.startAudio()
+	g.handleKeys()
 
 	g.stopped = g.paused || !ebiten.IsFocused()
 	if g.stopped {
@@ -82,6 +102,7 @@ func (g *Game) Update() error {
 
 	g.board.SetInputs(g.controls.Update(keys()))
 	g.board.RunFrame()
+	g.stream.Push(g.frames.Render(g.board.SoundEvents()))
 
 	invaders.Screen(g.board.Video(), g.screen)
 	g.painter.Paint(g.screen, g.rgba)
@@ -124,4 +145,38 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 	g.height = int(float64(outsideHeight) * g.scale)
 
 	return g.width, g.height
+}
+
+// startAudio starts the audio output once. Without an audio device the
+// game runs silently.
+func (g *Game) startAudio() {
+	if g.audioTried {
+		return
+	}
+
+	g.audioTried = true
+
+	if err := g.output.Start(g.stream); err != nil && g.settings.OnError != nil {
+		g.settings.OnError(err)
+	}
+}
+
+// handleKeys handles the keys that aren't the cabinet's controls (DESIGN
+// §13): P pause, M mute, - and = volume.
+func (g *Game) handleKeys() {
+	if inpututil.IsKeyJustPressed(ebiten.KeyP) {
+		g.paused = !g.paused
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyM) {
+		g.stream.SetMuted(!g.stream.Muted())
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyMinus) {
+		g.stream.SetVolume(g.stream.Volume() - volumeStep)
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyEqual) {
+		g.stream.SetVolume(g.stream.Volume() + volumeStep)
+	}
 }

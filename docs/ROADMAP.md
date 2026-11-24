@@ -44,10 +44,18 @@ Milestones for the Go version. The design is in [DESIGN.md](DESIGN.md).
   (attract, a 1-player and a 2-player game to game over) with picture and
   sound hashes every half second. Only hashes in git (DESIGN §15.3).
 
-## M3: Sound
+## M3: Sound ✅
 
-- `internal/synth`: the seven sounds (§14), tuned against references.
-- Audio output, amplifier enable, volume.
+- Reference tooling: MAME records each sound (Lua + `-wavwrite`, local);
+  `cmd/soundref` commits measurements (DESIGN §14.5).
+- `internal/synth`: MAME's circuit building blocks, the six discrete
+  circuits, the SN76477 for the UFO, the mixer and mute, ported to Go and
+  tested against the schematic's maths and MAME's output: waveform
+  correlation 0.9989–1.0000 per sound.
+- `internal/app/sound`: audio output at 48 kHz, events at the right sample,
+  volume (`-volume`, `-`/`=`) and mute (`M`).
+- The golden session against MAME's (local): with MAME's input timing the
+  game runs exactly as in MAME, and its sound matches (0.9996).
 
 ## M4: Browser and GitHub Pages
 
@@ -56,6 +64,8 @@ Milestones for the Go version. The design is in [DESIGN.md](DESIGN.md).
 - ROM screen: drop/pick, errors, forget; the optional external link.
 - CPU-test demo when no ROMs are loaded.
 - Loader page, `scripts/build.sh`, `pages.yml`, Playwright smoke test.
+- Ship the licence notices with the site (`LICENSE`, `LICENSE-MAME`;
+  DESIGN §19).
 - Measure the WASM size and record it in DESIGN §16.
 
 ## M5: The cabinet
@@ -73,6 +83,10 @@ Milestones for the Go version. The design is in [DESIGN.md](DESIGN.md).
   address in the disassembly).
 - Desktop release binaries (`release.yml`).
 - Cocktail cabinet view, using the flip bit.
+- A flag (and setting) to choose the Midway or the Taito sound board. MAME
+  notes where the Taito PCB differs (the shot's C12 is 0.22 µF and R13
+  2.2 MΩ, and its VCO circuit isn't fully modelled), so the shot would
+  change; needs Taito reference recordings to test against.
 - Other games on the Midway 8080 board.
 - Codeberg mirror (DESIGN §17.3).
 - A TinyGo build with a minimal web frontend, if download size ever matters.

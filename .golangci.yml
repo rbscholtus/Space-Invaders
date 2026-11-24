@@ -56,6 +56,7 @@ linters:
           files:
             - "**/internal/i8080/**"
             - "**/internal/synth/**"
+            - "!$test"
           deny:
             - pkg: github.com/rbscholtus/Space-Invaders
               desc: "i8080 and synth import nothing from this module (CONTRIBUTING)"

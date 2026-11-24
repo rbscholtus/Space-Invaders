@@ -6,8 +6,8 @@ to install**, and on the desktop. It will look like an upright arcade cabinet,
 with the coloured screen overlay and the moon backdrop, and on phones simply
 the screen.
 
-> **Status:** playable on the desktop, without sound yet. The browser
-> version, sound and the cabinet are next. The plan is in
+> **Status:** playable on the desktop, with sound. The browser version and
+> the cabinet are next. The plan is in
 > [docs/DESIGN.md](docs/DESIGN.md) and the milestones in
 > [docs/ROADMAP.md](docs/ROADMAP.md). The browser version will be published
 > on GitHub Pages.
@@ -22,7 +22,8 @@ go run ./cmd/invaders -roms path/to/invaders.zip
 ```
 
 `-roms` also takes a folder with the four files; by default it looks for
-`roms/invaders.zip`. `-lives 3`…`6` and `-bonus1000` set the DIP switches.
+`roms/invaders.zip`. `-lives 3`…`6` and `-bonus1000` set the DIP switches;
+`-volume 0`…`100` the sound (default 50).
 
 ## ROMs
 
@@ -42,6 +43,8 @@ the emulator will run a CPU self-test instead.
 | `←` `→` (or `A` `D`) | Move |
 | `Space` (or `↑`, `W`) | Fire |
 | `P` | Pause (also when the window isn't in front) |
+| `M` | Mute |
+| `-` / `=` | Volume down / up |
 
 On touch screens, the cabinet's buttons and coin slot will be the controls.
 
@@ -50,8 +53,24 @@ On touch screens, the cabinet's buttons and coin slot will be the controls.
 The original emulator from 2010, written in Java, is in [`java/`](java/) and
 tagged `java-2010`. It's kept for reference and no longer maintained.
 
+## Credits
+
+- **The sound** is ported from [MAME](https://www.mamedev.org/)'s emulation
+  of the Space Invaders sound board, by K. Wilkins, Derrick Renaud, Zsolt
+  Vasvari and the MAME team, and checked against MAME's own output.
+- **The hardware details** (memory map, ports, timing) and the screen's
+  colour overlay come from MAME's Midway 8080 driver and artwork.
+- **The CPU tests** are Frank D. Cringle's exercisers, converted to the 8080
+  by Ian Bartholomew.
+
 ## Licence
 
-BSD 3-Clause, see [LICENSE](LICENSE). The Java version in `java/` is Apache
-2.0. Space Invaders is a trademark of Taito; this project is not affiliated
+BSD 3-Clause, see [LICENSE](LICENSE). The sound code ported from MAME is
+also BSD 3-Clause, with MAME's notice in
+[internal/synth/LICENSE-MAME](internal/synth/LICENSE-MAME). The 8080
+exercisers in `third_party/` are GPL v2 or later; they are test programs the
+emulator runs, not part of its code. The Java version in `java/` is Apache
+2.0. Details: [DESIGN §19](docs/DESIGN.md#19-credits-and-third-party-licences).
+
+Space Invaders is a trademark of Taito; this project is not affiliated
 with Taito or Midway.

@@ -51,6 +51,11 @@ type Board struct {
 	overshoot int
 	frame     uint64
 
+	// pending are inputs that take effect when the beam reaches
+	// pendingLine in the next frame (-1: none); see SetInputsAt.
+	pending     Inputs
+	pendingLine int
+
 	frameStart uint64       // CPU.Cycles when the frame began
 	events     []SoundEvent // this frame's sound-port changes
 }
@@ -62,7 +67,7 @@ func New(rom []byte, dips DIPs) (*Board, error) {
 		return nil, fmt.Errorf("%w, not %d bytes", ErrROMSize, len(rom))
 	}
 
-	b := &Board{dips: dips, events: make([]SoundEvent, 0, maxSoundEvents)}
+	b := &Board{dips: dips, events: make([]SoundEvent, 0, maxSoundEvents), pendingLine: -1}
 	copy(b.mem[:romSize], rom)
 	b.CPU = i8080.New(b)
 	b.Reset()
@@ -78,6 +83,7 @@ func (b *Board) Reset() {
 	b.shifter = shifter{}
 	b.out3, b.out5, b.watchdog = 0, 0, 0
 	b.intVector, b.overshoot, b.frame = 0, 0, 0
+	b.pendingLine = -1
 	b.CPU.Reset()
 	b.frameStart = 0
 	b.events = b.events[:0]
@@ -85,6 +91,14 @@ func (b *Board) Reset() {
 
 // SetInputs sets the controls, as held during the next frames.
 func (b *Board) SetInputs(in Inputs) { b.inputs = in }
+
+// SetInputsAt sets the controls when the beam reaches line in the next
+// frame, rather than at its start. MAME latches its inputs once per frame
+// at the start of vertical blank: SetInputsAt(224, …) reproduces that, so
+// a scripted session runs exactly as in MAME (DESIGN §14.5).
+func (b *Board) SetInputsAt(line int, in Inputs) {
+	b.pending, b.pendingLine = in, line
+}
 
 // Frame returns the number of frames run since Reset.
 func (b *Board) Frame() uint64 { return b.frame }
@@ -98,6 +112,10 @@ func (b *Board) RunFrame() {
 	b.events = b.events[:0]
 
 	for line := range LinesPerFrame {
+		if line == b.pendingLine {
+			b.inputs, b.pendingLine = b.pending, -1
+		}
+
 		switch line {
 		case midScreenLine:
 			b.raiseInterrupt(opRST1)

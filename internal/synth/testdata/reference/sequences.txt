@@ -1,0 +1,61 @@
+# Sound-port sequences for the reference recordings (DESIGN §14.5), read by
+# scripts/mame/sounds.lua (MAME) and by the synth's tests (our emulator).
+#
+#   sound <name> <frames>     a sequence and its length in frames
+#   <frame> <port> <value>    write value to port in that frame's callback
+#
+# MAME runs the frame callback for frame f at the start of its vertical blank,
+# (f + 1) frame periods after power-on (soundref.Write.Sample).
+#
+# Frames are MAME's video frames, 59.54 per second (DESIGN §8). The game writes
+# no sound ports in attract mode, so these writes play each sound on its own.
+# Port 3 bit 5 (0x20) is the amplifier: it goes on at frame 120, after MAME's
+# power-on transient has settled, and stays on.
+
+# Shot: port 3 bit 1. The game holds the bit while the shot flies.
+sound shot 300
+120 3 0x20
+150 3 0x22
+180 3 0x20
+
+# Player dies: port 3 bit 2.
+sound playerdies 420
+120 3 0x20
+150 3 0x24
+210 3 0x20
+
+# Invader dies: port 3 bit 3.
+sound invaderdies 300
+120 3 0x20
+150 3 0x28
+160 3 0x20
+
+# Extended play (bonus life): port 3 bit 4, a tone while held.
+sound extendedplay 330
+120 3 0x20
+150 3 0x30
+240 3 0x20
+
+# UFO: port 3 bit 0, while held.
+sound ufo 420
+120 3 0x20
+150 3 0x21
+330 3 0x20
+
+# Fleet notes 1-4: port 5 bits 0-3, each held 4 frames, as the game does.
+sound fleet 400
+120 3 0x20
+150 5 0x01
+154 5 0x00
+200 5 0x02
+204 5 0x00
+250 5 0x04
+254 5 0x00
+300 5 0x08
+304 5 0x00
+
+# UFO hit: port 5 bit 4.
+sound ufohit 330
+120 3 0x20
+150 5 0x10
+210 5 0x00
