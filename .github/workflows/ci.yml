@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# Ebitengine's apt dependencies, the browser build (scripts/build.sh, size
+# budget) and the Playwright job come back when the app does (ROADMAP M2, M4).
+jobs:
+  lint:
+    name: Lint (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: native
+            goos: ""
+            goarch: ""
+          - target: wasm
+            goos: js
+            goarch: wasm
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: golangci/golangci-lint-action@v9
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        with:
+          version: v2.15.0
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Test (race)
+        run: go test -race -coverpkg=./... -coverprofile=coverage.out ./...
+      - name: Coverage summary
+        run: |
+          {
+            echo '### Coverage'
+            echo '```'
+            go tool cover -func=coverage.out | tail -n 1
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Native
+        run: go build ./...
+      - name: WebAssembly
+        run: GOOS=js GOARCH=wasm go build ./...
+      - name: Keep net/http out of the WebAssembly build
+        # It adds ~1.7 MB gzip; the browser uses platform.Fetch (fetch()).
+        run: |
+          if GOOS=js GOARCH=wasm go list -deps ./... | grep -qx net/http; then
+            echo "::error::net/http is linked into the WebAssembly build; use platform.Fetch"
+            exit 1
+          fi
