@@ -239,3 +239,23 @@ func TestFilesIsAnFS(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+func TestCheckImage(t *testing.T) {
+	t.Parallel()
+
+	set := fakeSet()
+	if err := romset.CheckImage(set, wantImage()); err != nil {
+		t.Errorf("good image: %v", err)
+	}
+
+	bad := wantImage()
+	bad[20] ^= 0xFF
+
+	if err := romset.CheckImage(set, bad); !errors.Is(err, romset.ErrBadImage) || !strings.Contains(err.Error(), "fake.b") {
+		t.Errorf("damaged image: %v, want ErrBadImage naming fake.b", err)
+	}
+
+	if err := romset.CheckImage(set, wantImage()[:10]); !errors.Is(err, romset.ErrBadImage) {
+		t.Errorf("short image: %v", err)
+	}
+}

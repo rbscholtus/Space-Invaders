@@ -277,3 +277,26 @@ func names(found []candidate) string {
 
 	return strings.Join(list, ", ")
 }
+
+// ErrBadImage is returned by CheckImage for an image that isn't the set.
+var ErrBadImage = errors.New("not this ROM set's image")
+
+// CheckImage checks an assembled image (for example one remembered from an
+// earlier visit) against the set: its size, and each chip's CRC-32 and
+// SHA-1.
+func CheckImage(set Set, image []byte) error {
+	if len(image) != set.ImageSize {
+		return fmt.Errorf("%w: %d bytes, want %d", ErrBadImage, len(image), set.ImageSize)
+	}
+
+	for _, f := range set.Files {
+		chip := image[f.Addr : int(f.Addr)+f.Size]
+		sum := sha1.Sum(chip) //nolint:gosec // G401: identifies the dump, see the import
+
+		if crc32.ChecksumIEEE(chip) != f.CRC || hex.EncodeToString(sum[:]) != f.SHA1 {
+			return fmt.Errorf("%w: %s differs", ErrBadImage, f.Name)
+		}
+	}
+
+	return nil
+}
