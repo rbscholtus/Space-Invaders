@@ -1,0 +1,30 @@
+{
+    "editor.formatOnSave": true,
+    "files.insertFinalNewline": true,
+    "files.trimTrailingWhitespace": true,
+
+    "go.toolsManagement.autoUpdate": true,
+    "go.diagnostic.vulncheck": "Imports",
+    "go.lintTool": "golangci-lint",
+    "go.lintFlags": [],
+    "go.lintOnSave": "package",
+    "go.testFlags": ["-v"],
+    // Uncomment while editing internal/platform/*_js.go so gopls type-checks the
+    // js/wasm side instead of the native stubs.
+    // "go.toolsEnvVars": { "GOOS": "js", "GOARCH": "wasm" },
+    "gopls": {
+        "formatting.gofumpt": true,
+        "formatting.local": "github.com/rbscholtus/Space-Invaders"
+    },
+    "[go]": {
+        "editor.rulers": [100, 120],
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "always"
+        }
+    },
+
+    "markdown.extension.toc.levels": "1..3",
+    "markdown.extension.toc.omittedFromToc": {
+        "docs/DESIGN.md": ["## Contents"]
+    }
+}

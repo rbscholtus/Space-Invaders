@@ -1,0 +1,113 @@
+version: "2"
+
+linters:
+  default: all
+  # Every disabled linter needs a one-line reason (CONTRIBUTING.md).
+  disable:
+    # Deprecated, replaced by the newer version that `default: all` enables
+    - exhaustruct      # replaced by exhaustruct_v5
+    - gomodguard       # replaced by gomodguard_v2
+    - wsl              # replaced by wsl_v5
+
+    # Too opinionated
+    - varnamelen       # short names are idiomatic in an emulator (a, b, hl, op, n, x, y)
+    - nlreturn         # blank line before every return; pure style, adds no safety
+    - mnd              # opcode masks, port bits and shifts (0x38, >>3) are clearer inline than named
+    - testpackage      # opcode tests need unexported state (registers, flags); conformance tests use _test packages anyway (DESIGN §15)
+    - exhaustruct_v5   # Go's zero values are idiomatic; listing every false flag adds noise
+    - cyclop           # flags the flat 256-case opcode switch; gocyclo and gocognit still catch real complexity
+    - noinlineerr      # `if err := f(); err != nil` is idiomatic Go (Effective Go)
+
+  settings:
+    # Enforces the package rules in CONTRIBUTING.md.
+    depguard:
+      rules:
+        core:
+          list-mode: lax
+          files:
+            - "**/internal/i8080/**"
+            - "**/internal/invaders/**"
+            - "**/internal/cpm/**"
+            - "**/internal/synth/**"
+            - "!$test"
+          deny:
+            - pkg: syscall/js
+              desc: "the core is platform-free; syscall/js lives only in internal/platform/"
+            - pkg: time
+              desc: "the core never reads the clock; it advances only through RunFrame / Step"
+            - pkg: math/rand
+              desc: "no global RNG state; use a seeded source passed in"
+            - pkg: os
+              desc: "the core does no I/O"
+            - pkg: net
+              desc: "the core does no I/O"
+            - pkg: reflect
+              desc: "keeps the core TinyGo-friendly and fast (DESIGN §2)"
+            - pkg: github.com
+              desc: "the core imports only the standard library"
+            - pkg: golang.org
+              desc: "the core imports only the standard library"
+        no-ebiten:
+          list-mode: lax
+          files:
+            - "**/internal/romset/**"
+          deny:
+            - pkg: github.com/hajimehoshi/ebiten
+              desc: "romset stays UI-free"
+        js-only-in-platform:
+          list-mode: lax
+          files:
+            - $all
+            - "!**/platform/**"
+          deny:
+            - pkg: syscall/js
+              desc: "syscall/js is allowed only in internal/platform/"
+        net-http-only-in-platform:
+          list-mode: lax
+          files:
+            - $all
+            - "!$test"
+            - "!**/platform/**"
+          deny:
+            - pkg: net/http
+              desc: "use platform.Fetch; net/http adds ~1.7 MB gzip to the WASM"
+        testrig-only-in-tests:
+          list-mode: lax
+          files:
+            - $all
+            - "!$test"
+            - "!**/internal/testrig/**"
+          deny:
+            - pkg: github.com/rbscholtus/Space-Invaders/internal/testrig
+              desc: "testrig is for tests only"
+
+  exclusions:
+    generated: lax
+    presets:
+      - common-false-positives
+      - std-error-handling
+    paths:
+      - third_party$
+      - ^java/
+    rules:
+      # An emulator truncates to 8/16 bits on purpose (registers, addresses, ports).
+      - linters: [gosec]
+        path: internal/(i8080|invaders|cpm)/
+        text: G115
+      # Table-driven tests are long and keep their tables and flags at package level.
+      - linters: [funlen, gochecknoglobals, goconst]
+        path: _test\.go$
+
+formatters:
+  enable:
+    - gofumpt          # stricter gofmt (CONTRIBUTING.md)
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/rbscholtus/Space-Invaders
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - ^java/
