@@ -30,8 +30,13 @@ Milestones for the Go version. The design is in [DESIGN.md](DESIGN.md).
 - `internal/romset`: zip/files, CRC check (verified CRCs from MAME).
 - `cmd/invaders`: a plain Ebitengine window, keyboard, coins, overlay
   colours. The game is playable.
-- Golden-frame tests (local, with ROMs).
-- Resolve every **⚠ verify** in DESIGN §7–§10.
+- A smoke test with your own ROMs: the attract mode runs (local only).
+- Resolve every **⚠ verify** in DESIGN §7–§10. ✅ (checked against MAME)
+
+## After M2: golden frames
+
+- Golden-frame tests (local, with ROMs); decide hashes only or nothing in
+  git (DESIGN §15.3).
 
 ## M3: Sound
 
