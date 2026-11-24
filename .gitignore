@@ -1,0 +1,52 @@
+# ── Go: build artifacts ──────────────────────────────────────────
+/invaders
+/cputest
+*.exe
+*.wasm
+*.test
+*.go.bak
+bin/
+
+# ── Go: tests, coverage, profiling ───────────────────────────────
+*.out
+coverage.html
+*.prof
+*.pprof
+internal/*/testdata/failures/
+vendor/
+
+# ── ROMs: never committed (DESIGN §9) ────────────────────────────
+# Put your own ROM set here for the local golden-frame tests (DESIGN §15.3).
+/roms/
+*.zip
+
+# ── Web build & browser tests ────────────────────────────────────
+web/dist/
+node_modules/
+e2e/test-results/
+e2e/playwright-report/
+e2e/blob-report/
+e2e/playwright/.cache/
+
+# ── Art: raw generator output (candidates, kept local) ───────────
+assets/source/
+
+# ── Java version (java/): NetBeans build output and local files ──
+/java/build/
+/java/dist/
+/java/src/spaceinvaders/roms/
+/java/src/spaceinvaders/samples/
+
+# ── IDE & editor ─────────────────────────────────────────────────
+.idea/
+.vscode/*.code-workspace
+*.sublime-project
+*.sublime-workspace
+
+# ── OS ───────────────────────────────────────────────────────────
+.DS_Store
+*.swp
+
+# ── AI tool state ────────────────────────────────────────────────
+.gemini/*
+.claude/settings.local.json
