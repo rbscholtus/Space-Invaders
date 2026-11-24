@@ -22,7 +22,6 @@ Milestones for the Go version. The design is in [DESIGN.md](DESIGN.md).
 - `internal/cpm` and `cmd/cputest`; `8080PRE` and `8080EXM` pass.
 - Licences of the exercisers verified (GPL v2 or later); committed in
   `third_party/`.
-- Still open: verify the `EI` delay in the Intel manual (DESIGN §6.3).
 
 ## M2: The board, on the desktop
 

@@ -20,6 +20,10 @@ vendor/
 /roms/
 *.zip
 
+# ── Reference material: copyrighted, kept local only ─────────────
+docs/*.pdf
+docs/*.png
+
 # ── Web build & browser tests ────────────────────────────────────
 web/dist/
 node_modules/

@@ -281,9 +281,9 @@ and jumps to `n*8` (11 cycles). When they're disabled, the request is
 ignored; Space Invaders keeps them enabled except in short critical sections,
 and the board re-raises its request each frame anyway. `EI` takes effect
 after the *next* instruction (so `EI; RET` returns before an interrupt is
-taken). ⚠ verify the `EI` delay against the Intel manual: implemented and
-tested (`TestEIDelay`), but the exercisers don't cover it, and the scanned
-manual found online has no text layer to check it against.
+taken). Source: Intel 8080 Microcomputer Systems User's Manual (98-153B,
+September 1975), p. 4-13: "The interrupt system is enabled following the
+execution of the next instruction." Tested by `TestEIDelay`.
 
 ## 7. The Space Invaders board
 
@@ -745,9 +745,10 @@ Dependabot for Go modules, npm (Playwright) and Actions.
 
 ## 18. References
 
-- **Intel 8080 Microcomputer Systems User's Manual** (1975) and the **8080
-  Assembly Language Programming Manual**: instruction behaviour, flags,
-  cycle counts.
+- **Intel 8080 Microcomputer Systems User's Manual** (98-153B, September
+  1975), chapter 4 (instruction set, with states per instruction), and the
+  **8080 Assembly Language Programming Manual**: instruction behaviour,
+  flags, cycle counts. Keep local copies in `docs/` (git-ignored).
 - **MAME source**, `src/mame/midw8080/mw8080bw.cpp` and `mw8080bw_a.cpp`:
   memory map, ports, video timing, interrupt lines, DIP switches, sound
   circuits, ROM CRCs. ⚠ verify the paths.
