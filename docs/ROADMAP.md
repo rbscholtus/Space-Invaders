@@ -38,10 +38,11 @@ Milestones for the Go version. The design is in [DESIGN.md](DESIGN.md).
   overlay colours from MAME's artwork. The game is playable.
 - `internal/testrig` and smoke tests with your own ROMs (local only).
 
-## After M2: golden frames
+## After M2: golden frames ✅
 
-- Golden-frame tests (local, with ROMs); decide hashes only or nothing in
-  git (DESIGN §15.3).
+- `TestGoldenSession` (local, with ROMs): a 6 min 40 s scripted session
+  (attract, a 1-player and a 2-player game to game over) with picture and
+  sound hashes every half second. Only hashes in git (DESIGN §15.3).
 
 ## M3: Sound
 

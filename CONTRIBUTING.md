@@ -127,7 +127,8 @@ Go file is `assets/assets.go`, which embeds the data around it (DESIGN §5).
 - **Golden frames need your own ROMs** (`roms/invaders.zip` or
   `INVADERS_ROMS`) and skip without them. CI doesn't run them; run them
   locally before a PR that touches `i8080`, `invaders` or video.
-- **Goldens:** `go test ./... -update` regenerates goldens; regenerated ones
+- **Goldens:** `go test ./internal/<pkg> -update` regenerates goldens (the
+  package before the flag); regenerated ones
   must be checked in the PR (by eye for frames, by ear for audio). Never
   weaken a golden to make a test pass.
 - **Deterministic:** seeded noise, frame counts instead of time, no network

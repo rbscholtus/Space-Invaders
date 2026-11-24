@@ -342,7 +342,7 @@ Source: MAME `mw8080bw.cpp`, `INPUT_PORTS_START( invaders )` and
 | 2 | 7 | DIP: coin info shown in attract mode, 0 = on |
 | 3 | 0–7 | Shift register result (§7.4) |
 
-The game reads port 0, but Space Invaders doesn't use it. The coin polarity
+The game never reads port 0 (there is no `IN 0` in the ROM). The coin polarity
 is confirmed by the game code: the VBLANK handler (`RST 2`, `0x0010`) reads
 port 1 and adds a credit when bit 0 drops from 1 to 0.
 
@@ -714,14 +714,19 @@ about 27 s (Apple M-series, Go 1.27.4, about 870 MHz emulated).
   `EI`/`DI`/`HLT` and the sound-latch events.
 - **Golden frames (local only):** the real ROM isn't available in CI. With a
   ROM set in `roms/invaders.zip` (git-ignored), or `INVADERS_ROMS=<path>`,
-  the tests run the attract mode and a scripted game (coin, start, fire, move
-  at fixed frames) and compare frames at fixed frame numbers with goldens in
-  `internal/invaders/testdata/golden/`. Without ROMs they're skipped with a
-  clear message. The goldens are 1-bit pictures of copyrighted screens, so
-  they are stored as hashes plus a local `.png` that's never committed
-  ⚠ decide: hashes only in git, or no goldens in git at all. Deferred until
-  the game runs (ROADMAP: after M2); until then, board tests (above) and a
-  ROM smoke test cover the board.
+  `TestGoldenSession` plays a scripted session of 24,000 frames (6 min 40 s
+  of game time, under a second to run): 90 s of attract mode, three coins, a
+  1-player game until all ships are lost, a 2-player game until game over,
+  and attract mode again. Every 30 frames it compares a SHA-256 of video RAM
+  and a SHA-256 of the sound events since the last checkpoint with
+  `internal/invaders/testdata/golden/session.txt` (800 checkpoints). The test
+  also checks that the session still reaches every phase (2 games, 2 game
+  overs, ships lost, both players scoring), so the hashes can't silently
+  cover less. Without ROMs it's skipped with a clear message.
+- **Only hashes are committed:** the pictures are Taito's. `-update`
+  rewrites the hashes and writes every checkpoint's picture to
+  `testdata/golden/png/` (git-ignored) to check by eye; on a mismatch the
+  test writes the differing pictures to `testdata/failures/` (git-ignored).
 - **Never weaken a golden to make a test pass.** Fix the emulator, or explain
   in the PR why the golden was wrong.
 
