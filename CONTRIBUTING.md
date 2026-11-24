@@ -66,6 +66,8 @@ Go file is `assets/assets.go`, which embeds the data around it (DESIGN §5).
 
 ## Ebitengine rules
 
+- **No `ebitenutil`.** It imports `net/http`, about 1.7 MB gzip in the WASM
+  build; depguard forbids it. Draw text with our own font.
 - **Never block `Update` or `Draw`.** Storage and file-picker work runs in
   goroutines and reports back on channels that `Update` polls without
   blocking (`select` with `default`).
@@ -127,11 +129,21 @@ Go file is `assets/assets.go`, which embeds the data around it (DESIGN §5).
 - **Golden frames need your own ROMs** (`roms/invaders.zip` or
   `INVADERS_ROMS`) and skip without them. CI doesn't run them; run them
   locally before a PR that touches `i8080`, `invaders` or video.
-- **Goldens:** `go test ./... -update` regenerates goldens; regenerated ones
+- **Goldens:** `go test ./internal/<pkg> -update` regenerates goldens (the
+  package before the flag); regenerated ones
   must be checked in the PR (by eye for frames, by ear for audio). Never
   weaken a golden to make a test pass.
 - **Deterministic:** seeded noise, frame counts instead of time, no network
   in `go test`.
+- **Hand-written 8080 test programs:** keep code blocks clear of the `RST`
+  vectors (`0x00`, `0x08`, `0x10`, ...): start with `JMP` past them. Code in
+  a map literal is copied in random order, so an overlap passes or fails at
+  random.
+- **Driving the real game:** measure how long the game takes before
+  assuming (DESIGN §7.6); log its RAM state while writing a script, and
+  make the test check that the script reaches what it means to cover.
+- **`testing.AllocsPerRun`** panics in parallel tests: don't call
+  `t.Parallel()` in those (`//nolint:paralleltest` with the reason).
 - **Browser tests** (`e2e/`, Playwright): allow for software rendering in CI.
 - **Coverage:** `internal/i8080/` aims for 95%+ line coverage. Coverage is
   reported in CI (`-coverpkg=./...`), not enforced.
@@ -150,5 +162,11 @@ Go file is `assets/assets.go`, which embeds the data around it (DESIGN §5).
 ## Git
 
 - **Branches:** short-lived branches off `main`. PRs need green CI.
+- **Merging:** normal merge commits, not squash, so stacked PRs (a branch
+  based on another PR's branch) merge cleanly: merge the bottom one, set
+  the next one's base to `main`, merge it. Delete merged branches.
+- **Reference material** (manuals, screenshots) may be kept in `docs/` for
+  local use; `docs/*.pdf` and `docs/*.png` are git-ignored, as they're
+  usually copyrighted.
 - **Commit messages:** Conventional Commits, e.g. `feat(i8080): add DAA`,
   `fix(invaders): mirror RAM above 0x4000`, `test: ...`, `perf: ...`.

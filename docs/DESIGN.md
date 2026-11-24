@@ -342,7 +342,7 @@ Source: MAME `mw8080bw.cpp`, `INPUT_PORTS_START( invaders )` and
 | 2 | 7 | DIP: coin info shown in attract mode, 0 = on |
 | 3 | 0–7 | Shift register result (§7.4) |
 
-The game reads port 0, but Space Invaders doesn't use it. The coin polarity
+The game never reads port 0 (there is no `IN 0` in the ROM). The coin polarity
 is confirmed by the game code: the VBLANK handler (`RST 2`, `0x0010`) reads
 port 1 and adds a credit when bit 0 drops from 1 to 0.
 
@@ -383,6 +383,33 @@ any x position.
 The board's DIP switches (lives, bonus life, coin info) are settings in the
 app, stored in preferences, and applied on the next power-on. Defaults, as
 in MAME: 3 lives, bonus at 1500, coin info on.
+
+### 7.6 What the game does (from the ROM and from running it)
+
+Facts the tests rely on, found by disassembling the player's ROM and by
+running it; addresses are work RAM.
+
+- **Reset:** the 8080 starts at `0x0000`, which jumps to `0x18D4`: stack
+  at `0x2400`, RAM set-up, then the attract mode at `0x0AEA`. There is no
+  self-test or RAM/ROM check: the Midway board's diagnostics were separate
+  test ROMs.
+- **Ports read:** 1, 2 and 3 only; never 0.
+- **Interrupt handlers:** `RST 1` (`0x0008`) and `RST 2` (`0x0010`). The
+  coin switch is read in the `RST 2` handler (§7.2).
+
+| Address | Meaning |
+|---|---|
+| `0x20EB` | Credits, BCD |
+| `0x20EF` | Game mode: 1 while a game runs |
+| `0x21FF` | Player 1's ships in reserve |
+| `0x20F8`, `0x20F9` | Player 1's score, BCD, low byte first |
+| `0x20FC`, `0x20FD` | Player 2's score |
+
+**Timing, measured** (frames at 60 per second, from the start button):
+the amplifier turns on (port 3 bit 5) after about 200 frames (3.3 s), when
+"PLAY PLAYER 1" ends; the cannon can fire after 300–350 frames (5–6 s).
+Tests that drive the game must wait at least that long; guessing shorter
+times made the first smoke test fail.
 
 ## 8. Timing
 
@@ -660,8 +687,11 @@ rates) and MAME's audio code, then compare against reference recordings.
 - **Amplifier enable** (port 3 bit 5): 0 mutes the output (the game turns it
   off in attract mode).
 - **Sample-accurate timing.** The board records every port 3/5 write that
-  changes a bit as `(cycle, port, value)` in a preallocated per-frame list;
-  the synth starts each sound at the matching sample.
+  changes a bit as `(cycle, port, value)` in a preallocated per-frame list
+  (64 entries; a frame with more keeps the latest value in the last one);
+  the synth starts each sound at the matching sample. The cycle is when the
+  `OUT` instruction begins, at most 10 cycles (5 µs) before the write:
+  under a quarter of a sample at 48 kHz.
 - **Deterministic:** the noise generator is a seeded LFSR (like the real noise
   source), so tests can compare rendered audio exactly.
 
@@ -704,7 +734,9 @@ package provides exactly that.
 The tests compare the full printed output with a golden text file. `8080EXM`
 runs 23.8 billion cycles (about 45 minutes on a real 8080 at 2 MHz): the test
 is part of the normal suite but skipped with `-short`. Natively it takes
-about 27 s (Apple M-series, Go 1.27.4, about 870 MHz emulated).
+about 27 s (Apple M3, Go 1.27.4, about 870 MHz emulated). With `-race` it
+takes many minutes, so CI runs the race detector with `-short` and the
+exercisers in a separate step without it.
 
 ### 15.3 Board tests and golden frames
 
@@ -714,14 +746,19 @@ about 27 s (Apple M-series, Go 1.27.4, about 870 MHz emulated).
   `EI`/`DI`/`HLT` and the sound-latch events.
 - **Golden frames (local only):** the real ROM isn't available in CI. With a
   ROM set in `roms/invaders.zip` (git-ignored), or `INVADERS_ROMS=<path>`,
-  the tests run the attract mode and a scripted game (coin, start, fire, move
-  at fixed frames) and compare frames at fixed frame numbers with goldens in
-  `internal/invaders/testdata/golden/`. Without ROMs they're skipped with a
-  clear message. The goldens are 1-bit pictures of copyrighted screens, so
-  they are stored as hashes plus a local `.png` that's never committed
-  ⚠ decide: hashes only in git, or no goldens in git at all. Deferred until
-  the game runs (ROADMAP: after M2); until then, board tests (above) and a
-  ROM smoke test cover the board.
+  `TestGoldenSession` plays a scripted session of 24,000 frames (6 min 40 s
+  of game time, under a second to run): 90 s of attract mode, three coins, a
+  1-player game until all ships are lost, a 2-player game until game over,
+  and attract mode again. Every 30 frames it compares a SHA-256 of video RAM
+  and a SHA-256 of the sound events since the last checkpoint with
+  `internal/invaders/testdata/golden/session.txt` (800 checkpoints). The test
+  also checks that the session still reaches every phase (2 games, 2 game
+  overs, ships lost, both players scoring), so the hashes can't silently
+  cover less. Without ROMs it's skipped with a clear message.
+- **Only hashes are committed:** the pictures are Taito's. `-update`
+  rewrites the hashes and writes every checkpoint's picture to
+  `testdata/golden/png/` (git-ignored) to check by eye; on a mismatch the
+  test writes the differing pictures to `testdata/failures/` (git-ignored).
 - **Never weaken a golden to make a test pass.** Fix the emulator, or explain
   in the PR why the golden was wrong.
 
@@ -747,7 +784,19 @@ DIP switches), the file picker, URL parameters, `platform.InFront`, and
 `Draw`; async work runs in goroutines and reports on channels.
 
 **Performance:** the 8080 at 2 MHz is about 0.5 million instructions per
-second; a plain Go interpreter does far more, even in WASM. The cost is in
+second; a plain Go interpreter does far more, even in WASM. Measured
+natively (Apple M3, Go 1.27.4, M2):
+
+| Benchmark | Time | Notes |
+|---|---|---|
+| `BenchmarkStep` | 4.9 ns per instruction | |
+| `BenchmarkEXM` | 864 MHz emulated | about 430 × real time |
+| `BenchmarkFrame` | 33 µs per frame | 0.2% of a 16.7 ms frame |
+| `BenchmarkScreen` | 31 µs | video RAM → rotated picture |
+| `BenchmarkPaint` | 50 µs | overlay colours on the CPU, until M5's shader |
+
+The whole per-frame path is about 0.12 ms natively; WASM is typically 2–5 ×
+slower, which still leaves the frame to drawing. The cost is in
 drawing: the CRT and overlay shaders at high pixel densities, as Chippie
 found. Benchmarks: `BenchmarkFrame` (one emulated frame), `BenchmarkEXM`
 (exerciser throughput), `BenchmarkVideo` (video RAM → pixels). PRs that touch
