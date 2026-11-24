@@ -485,34 +485,44 @@ The ROMs are copyrighted by Taito. They are never committed, hosted, or
 downloaded by the app.
 
 - **Browser:** drop a `.zip` or the four files on the page, or pick them with
-  the file picker. `romset` reads the zip (`archive/zip`, in memory), matches
-  files by CRC-32 (so renamed files still work), checks all four are present,
-  and builds the 8 KB image. The image is stored in IndexedDB, so the next
-  visit starts at once. A "forget ROMs" setting removes it.
-- **Desktop:** the same drop and picker, and a `-roms <path>` flag (zip or
-  folder). The image is cached in the user config folder.
+  the file picker (click, or `O`). `romset` reads the zip (`archive/zip`, in
+  memory), matches files by CRC-32 (so renamed files still work), checks all
+  four are present, and builds the 8 KB image. The image is stored in
+  IndexedDB, so the next visit starts at once. `F` forgets it.
+- **Desktop:** the same drop, and a `-roms <path>` flag (zip or folder),
+  now optional. The image is cached in the user cache folder.
+- **The flow:** at start, the cached image is loaded in a goroutine (never in
+  `Update`); while there is none, the ROM screen shows over the CPU-test
+  demo (§9.4); a good set starts the game and is cached. Dropped files come
+  from `ebiten.DroppedFiles()`, an `fs.FS` that `romset.Load` reads directly;
+  picked files go through `romset.Files`, an in-memory `fs.FS`.
 - **Errors** say exactly what's missing or wrong: "invaders.f is missing",
   "invaders.zip has no Space Invaders ROMs (found: ...)", "CRC mismatch: this
   looks like a bootleg set".
 
 ### 9.3 The external link
 
-The ROM screen may also show a link to an external page about obtaining the
-ROMs. The player opens it in a new tab themselves; the app never fetches
-from it. Which page (if any) is the owner's decision, documented in the
-README; it must not be a direct download link to the ROM files.
+**Decided (M4): no link.** The ROM screen and the README explain that the
+MAME `invaders` set is needed and how to load it. If a link is ever added,
+the player opens it themselves, the app never fetches from it, and it must
+not be a direct download of ROM files.
 
 ### 9.4 Without ROMs: the CPU-test demo
 
 When no ROMs are loaded, the cabinet still does something: it runs the 8080
-exerciser `8080EXM` (GPL, §15.2) under the `cpm` harness, at full speed, and
-shows its output on the cabinet screen in a 1978-style font: each instruction
-group and "OK" or "ERROR". This shows the emulator works, gives the browser
+exerciser `8080EXM` (GPL, §15.2) under the `cpm` harness, a fixed number of
+cycles per frame (as fast as the frame allows), and shows its output on the
+monitor in our pixel font (§10): each instruction group, then "OK" or
+"ERROR", fitted to the monitor's 28 columns. This shows the emulator works, gives the browser
 tests something to render without ROMs, and makes the "load your ROMs" message
 less of a dead end.
 
-The exerciser files are served next to the WASM (not compiled into it), with
-their licence and source, like Chippie's test-suite ROMs.
+The exerciser files are served next to the WASM in `exercisers/` (not
+compiled into it), with their licence and source, like Chippie's
+test-suite ROMs; the browser fetches `8080EXM.COM` with `platform.Fetch`.
+The desktop reads it from `third_party/8080-exercisers/` when run from the
+repository, and shows no demo otherwise. `?demo=fast` runs more cycles per
+frame, for the browser tests.
 
 ## 10. Video
 
@@ -532,6 +542,11 @@ their licence and source, like Chippie's test-suite ROMs.
   and makes golden frames trivial (§15.3). `invaders.Board.Video()` returns a
   read-only view; `app` turns it into an `ebiten.Image` with `WritePixels` on
   a preallocated buffer.
+- **Text** (the ROM screen, the demo) uses our own 8×8 pixel font
+  (`internal/app/font`, ASCII 32–126, original glyphs in a 1978 terminal
+  style): 28 columns by 32 rows on the 224 × 256 monitor, drawn into the same
+  1-byte-per-pixel picture as the game, so the overlay colours it too. No
+  font file, nothing from the game's own font.
 - **Monochrome output.** The board outputs white only. Colour comes from the
   overlay (§11.2), applied by the shader, never by the board.
 - **Flip:** in cocktail mode, port 5 bit 5 rotates the picture 180° for
@@ -621,6 +636,8 @@ starting point, adjusted for a rotated, vertical picture.
 | `P` | Pause |
 | `M` | Mute |
 | `-` / `=` | Volume down / up (10% steps; `-volume 0–100` at start, default 50) |
+| `O` | Open the ROM files (browser file picker), on the ROM screen |
+| `F` | Forget the remembered ROMs and go back to the ROM screen |
 | `V` | Switch view |
 | `F1` | Stats overlay |
 
@@ -859,11 +876,17 @@ line (no ROM needed). Allow for software rendering.
 
 ## 16. Browser integration and performance
 
-**Browser-specific code** lives in `internal/platform/`, with desktop stubs,
-as in Chippie: IndexedDB (the ROM image), `localStorage` (settings, view,
-DIP switches), the file picker, URL parameters, `platform.InFront`, and
-`platform.OpenURL` for the external link. Nothing there blocks `Update` or
-`Draw`; async work runs in goroutines and reports on channels.
+**Browser-specific code** lives in `internal/platform/`, adapted from
+Chippie, each `_js.go` with an `_other.go` for the desktop: `Cache`
+(IndexedDB; the user cache folder), `Prefs` (`localStorage`; a JSON file:
+volume, mute, later the view and DIP switches), `Params` (URL query; flags),
+`PickFiles`, `InFront` (page visibility; iOS Safari can misreport focus),
+`Fetch` (`fetch()`, not `net/http`) and `PublishState` (the app's state as
+`window.invadersState`, for the browser tests). Nothing there blocks
+`Update` or `Draw`; async work runs in goroutines and reports on channels.
+
+**Audio in the browser** starts on the first key press, click or drop, as
+browsers require a user gesture (§14.4); on the desktop at start.
 
 **Performance:** the 8080 at 2 MHz is about 0.5 million instructions per
 second; a plain Go interpreter does far more, even in WASM. Measured
