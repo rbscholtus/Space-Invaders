@@ -7,13 +7,12 @@ import (
 	"encoding/hex"
 	"errors"
 	"hash/crc32"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"testing/fstest"
 
 	"github.com/rbscholtus/Space-Invaders/internal/romset"
+	"github.com/rbscholtus/Space-Invaders/internal/testrig"
 )
 
 // chip returns 16 bytes of made-up ROM contents, different per seed.
@@ -179,34 +178,7 @@ func TestInvadersTable(t *testing.T) {
 func TestRealROMs(t *testing.T) {
 	t.Parallel()
 
-	path := os.Getenv("INVADERS_ROMS")
-	if path == "" {
-		path = filepath.Join("..", "..", "roms", "invaders.zip")
-	}
-
-	info, err := os.Stat(path) //nolint:gosec // G703: the developer's own ROM path, from their environment
-	if err != nil {
-		t.Skipf("no ROM set at %s (set INVADERS_ROMS to use another)", path)
-	}
-
-	var image []byte
-
-	if info.IsDir() {
-		image, err = romset.Load(romset.Invaders(), os.DirFS(path))
-	} else {
-		var data []byte
-
-		data, err = os.ReadFile(path) //nolint:gosec // G703: as above
-		if err == nil {
-			image, err = romset.LoadZip(romset.Invaders(), data)
-		}
-	}
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if len(image) != 0x2000 {
+	if image := testrig.ROMs(t); len(image) != 0x2000 {
 		t.Errorf("image is %d bytes, want 8192", len(image))
 	}
 }
