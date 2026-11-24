@@ -34,6 +34,7 @@ Remove the mark once checked, and cite the source.
 16. [Browser integration and performance](#16-browser-integration-and-performance)
 17. [Build, CI and deployment](#17-build-ci-and-deployment)
 18. [References](#18-references)
+19. [Credits and third-party licences](#19-credits-and-third-party-licences)
 
 ---
 
@@ -69,7 +70,8 @@ Rescue, Space Invaders Part II, ...), save states, a debugger UI (§3), netplay.
 | CPU core | A fresh Go 8080 in `internal/i8080`, written against the Intel manual and the exercisers, not translated line by line from the Java (§3). |
 | ROMs | Bring your own: drop a MAME `invaders.zip` or the four files; checked by CRC-32; kept in IndexedDB (browser) or a user folder (desktop). An optional link to an external page the player opens themselves. Never hosted or fetched by us. |
 | No-ROM mode | A CPU-test demo: the 8080 exerciser (GPL) running on the cabinet screen (§9.4). |
-| Sound | MAME's circuit models of the sound board, ported to Go (§14). No samples. |
+| Sound | Ported from MAME's emulation of the sound board's circuits (`mw8080bw_a.cpp`, `disc_*.hxx`, `sn76477.cpp`; BSD-3-Clause, notice in `internal/synth/LICENSE-MAME`), tested against MAME's own output (§14). No samples. |
+| Third-party work | Everything used from others, how, and under which licence, is listed in §19. |
 | Look | Upright cabinet with all decorations; "screen" view (screen + overlay + moon) on small screens, or when chosen (§11). |
 | Art | Original artwork only. Nothing copied from Taito/Midway cabinet art, marquee or backdrop (§12). |
 | Debugger | No GUI. A headless trace tool and an on-screen stats overlay instead (§3). |
@@ -863,7 +865,8 @@ golangci-lint run && GOOS=js GOARCH=wasm golangci-lint run
 `scripts/build.sh`, as in Chippie: build `invaders.wasm` with
 `-trimpath -ldflags="-s -w"`, gzip it as `invaders-gz.wasm`, inline
 `wasm_exec.js` into the loader page, copy the exercisers (with licence and
-source) and the cabinet art into `web/dist/`.
+source), the cabinet art, and the licence notices (`LICENSE`,
+`internal/synth/LICENSE-MAME`, §19) into `web/dist/`.
 
 ### 17.2 GitHub Actions
 
@@ -908,3 +911,26 @@ Dependabot for Go modules, npm (Playwright) and Actions.
   Frank Cringle's `zexall`.
 - **Chippie** (github.com/rbscholtus/chippie): the loader, platform layer,
   shaders, CI and Pages setup this project reuses.
+
+## 19. Credits and third-party licences
+
+Our own code is BSD-3-Clause (`LICENSE`). What we use from others:
+
+| What | From | Licence | How it's used | Notice |
+|---|---|---|---|---|
+| Sound emulation (`internal/synth`) | MAME: the Space Invaders sound board (`mw8080bw_a.cpp`) and the discrete-circuit and SN76477 emulation (`disc_*.hxx`, `discrete.h`, `sn76477.cpp`, `rescap.h`); K. Wilkins, D. Renaud, Z. Vasvari and others | BSD-3-Clause | Ported to Go: source code derived from theirs | `internal/synth/LICENSE-MAME`, and a "Ported from MAME's …" comment in each file |
+| 8080 exercisers (`third_party/8080-exercisers`) | Frank D. Cringle (1994), converted to the 8080 by Ian Bartholomew (2009) | GPL v2 or later | Data: loaded and run by the CPU, never linked into our code | `third_party/8080-exercisers/README.md`, `COPYING` |
+| Colour overlay (`internal/app/overlay`) | MAME's `layout/invaders.lay` | CC0 | The strip positions and colours | Cited in the code |
+| Hardware facts (memory map, ports, timing, interrupts, DIP switches, ROM CRCs) | MAME's `mw8080bw` driver; the Intel 8080 manual | Facts, not code | Checked and cited per fact (§7–§10) | Cited in DESIGN and the code |
+| Reference recordings and measurements (`internal/synth/testdata/reference`) | Made locally with MAME from the player's own ROMs | Our measurements (numbers only) | Tests (§14.5); the recordings themselves are never committed | — |
+| Loader, platform layer, CI | Chippie (our own project) | BSD-3-Clause | Copied and adapted | — |
+
+**Binary releases** (the WASM site, desktop binaries) must carry the BSD-3
+notices too (clause 2): `scripts/build.sh` and `release.yml` copy
+`LICENSE` and `internal/synth/LICENSE-MAME` next to the program (M4), and an
+"About" screen lists them (M5).
+
+**The game itself** (its program, graphics and sound design, the name
+"Space Invaders") is Taito's. We ship none of it: players bring their own
+ROMs (§9), the art is our own (§12), and the sound is emulated, not
+recorded.

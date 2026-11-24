@@ -151,6 +151,18 @@ Go file is `assets/assets.go`, which embeds the data around it (DESIGN §5).
   (native), the WASM build, and the native build all pass. 8080EXM is
   skipped under `-short`, because it takes many minutes with `-race`.
 
+## Code and data from others
+
+- **Ported or copied code keeps its licence notice** and is listed in
+  DESIGN §19: a `LICENSE-<SOURCE>` file in the package (like
+  `internal/synth/LICENSE-MAME`) and a "Ported from …" comment in each file
+  naming the original file and function.
+- **Only licences compatible with BSD-3** for code we compile in (BSD, MIT,
+  Apache 2.0, CC0, ...). GPL material is only ever data the emulator loads
+  (the exercisers in `third_party/`), never linked.
+- **Facts** (hardware behaviour, component values) are cited where they're
+  used, with the source (DESIGN §18).
+
 ## Assets
 
 - **Every asset has a recorded origin and licence** in `assets/LICENSES.md`:

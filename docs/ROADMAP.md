@@ -62,6 +62,8 @@ Milestones for the Go version. The design is in [DESIGN.md](DESIGN.md).
 - ROM screen: drop/pick, errors, forget; the optional external link.
 - CPU-test demo when no ROMs are loaded.
 - Loader page, `scripts/build.sh`, `pages.yml`, Playwright smoke test.
+- Ship the licence notices with the site (`LICENSE`, `LICENSE-MAME`;
+  DESIGN §19).
 - Measure the WASM size and record it in DESIGN §16.
 
 ## M5: The cabinet
