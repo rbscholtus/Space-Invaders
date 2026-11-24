@@ -104,12 +104,12 @@ func measure(dir, source string, seq soundref.Sequence, stdout io.Writer) error 
 		return fmt.Errorf("%s: %w", seq.Name, err)
 	}
 
-	start := 0
+	start, from := 0, 0
 	if len(seq.Writes) > 0 {
 		start = seq.Writes[0].Frame
+		from = min(seq.Writes[0].Sample(rate), len(samples))
 	}
 
-	from := min(soundref.SampleAt(start, rate), len(samples))
 	sum := sha256.Sum256(data)
 	ref := soundref.Reference{
 		Sound: seq.Name, Source: source, WAVSHA256: hex.EncodeToString(sum[:]), StartFrame: start,

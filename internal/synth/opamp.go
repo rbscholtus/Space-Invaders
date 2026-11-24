@@ -11,26 +11,32 @@ package synth
 // through r2, r3 adds a fixed current from vP; r4 and c set the output (an
 // RC charge, a linear integrator, a gain, or a comparator).
 type opAmp struct {
-	r1, r2, r3, r4, c float64
-	vN, vP            float64
+	opAmpParams
 
 	vMax, iFixed, exp float64
 	vCap              float64
 }
 
-func newOpAmp(r1, r2, r3, r4, c, vN, vP, dt float64) *opAmp {
-	a := &opAmp{r1: r1, r2: r2, r3: r3, r4: r4, c: c, vN: vN, vP: vP, vMax: vP - nortonVBE}
+// opAmpParams are an op-amp stage's components (MAME's
+// discrete_op_amp_info); 0 means not fitted. vN is the negative supply.
+type opAmpParams struct {
+	r1, r2, r3, r4, c float64
+	vN, vP            float64
+}
 
-	if c > 0 {
-		if r4 > 0 {
-			a.exp = chargeExp(r4*c, dt) // exponential charge
+func newOpAmp(p opAmpParams, dt float64) *opAmp {
+	a := &opAmp{opAmpParams: p, vMax: p.vP - nortonVBE}
+
+	if p.c > 0 {
+		if p.r4 > 0 {
+			a.exp = chargeExp(p.r4*p.c, dt) // exponential charge
 		} else {
-			a.exp = c / dt // linear charge: sample rate × c
+			a.exp = p.c / dt // linear charge: sample rate × c
 		}
 	}
 
-	if r3 > 0 {
-		a.iFixed = (vP - nortonVBE) / r3
+	if p.r3 > 0 {
+		a.iFixed = (p.vP - nortonVBE) / p.r3
 	}
 
 	return a
@@ -84,15 +90,23 @@ type oneShot struct {
 	out          float64
 }
 
-func newOneShot(r1, r2, r3, r4, r5, c1, c2, vN, vP, dt float64) *oneShot {
+// oneShotParams are a one-shot's components (MAME's
+// discrete_op_amp_1sht_info).
+type oneShotParams struct {
+	r1, r2, r3, r4, r5 float64
+	c1, c2             float64
+	vN, vP             float64
+}
+
+func newOneShot(p oneShotParams, dt float64) *oneShot {
 	return &oneShot{
-		r2: r2, r3: r3, r5: r5, vN: vN,
-		exp1c:    chargeExp(parallel(r3, r4)*c1, dt),
-		exp1d:    chargeExp(r4*c1, dt),
-		exp2:     chargeExp(r2*c2, dt),
-		iFixed:   (vP - nortonVBE) / r1,
-		vMax:     vP - nortonVBE,
-		r34ratio: r3 / (r3 + r4),
+		r2: p.r2, r3: p.r3, r5: p.r5, vN: p.vN,
+		exp1c:    chargeExp(parallel(p.r3, p.r4)*p.c1, dt),
+		exp1d:    chargeExp(p.r4*p.c1, dt),
+		exp2:     chargeExp(p.r2*p.c2, dt),
+		iFixed:   (p.vP - nortonVBE) / p.r1,
+		vMax:     p.vP - nortonVBE,
+		r34ratio: p.r3 / (p.r3 + p.r4),
 	}
 }
 
@@ -158,22 +172,32 @@ type tvca struct {
 	vCap1, vCap4 float64
 }
 
-func newTVCA(r1, r2, r4, r5, r6, r7, c1, c4, v1, vP float64, f2 triggerFunc, dt float64) *tvca {
-	v := &tvca{r2: r2, r4: r4, f2: f2, r67: r6 + r7, vMax: vP - nortonVBE}
-	v.iFixed = v.vMax / r1
-	v.vTrig[0] = (v1 - diodeDrop) * divider(r5, r6)
-	v.vTrig[1] = (v1-diodeDrop-nortonVBE)*divider(r5, v.r67) + nortonVBE
-	v.expC[0] = chargeExp(parallel(r5, r6)*c1, dt)
-	v.expC[1] = chargeExp(parallel(r5, v.r67)*c1, dt)
-	v.expD[1] = chargeExp(v.r67*c1, dt)
+// tvcaParams are a triggered VCA's components (MAME's
+// discrete_op_amp_tvca_info, for the parts the board uses). v1 is the
+// trigger's high voltage.
+type tvcaParams struct {
+	r1, r2, r4, r5, r6, r7 float64
+	c1, c4                 float64
+	v1, vP                 float64
+	f2                     triggerFunc
+}
 
-	if r6 != 0 {
-		v.expD[0] = chargeExp(r6*c1, dt)
+func newTVCA(p tvcaParams, dt float64) *tvca {
+	v := &tvca{r2: p.r2, r4: p.r4, f2: p.f2, r67: p.r6 + p.r7, vMax: p.vP - nortonVBE}
+	v.iFixed = v.vMax / p.r1
+	v.vTrig[0] = (p.v1 - diodeDrop) * divider(p.r5, p.r6)
+	v.vTrig[1] = (p.v1-diodeDrop-nortonVBE)*divider(p.r5, v.r67) + nortonVBE
+	v.expC[0] = chargeExp(parallel(p.r5, p.r6)*p.c1, dt)
+	v.expC[1] = chargeExp(parallel(p.r5, v.r67)*p.c1, dt)
+	v.expD[1] = chargeExp(v.r67*p.c1, dt)
+
+	if p.r6 != 0 {
+		v.expD[0] = chargeExp(p.r6*p.c1, dt)
 	}
 
-	if r4 != 0 && c4 != 0 {
+	if p.r4 != 0 && p.c4 != 0 {
 		v.hasC4 = true
-		v.exp4 = chargeExp(r4*c4, dt)
+		v.exp4 = chargeExp(p.r4*p.c4, dt)
 	}
 
 	v.step(false, 0) // MAME's reset steps once

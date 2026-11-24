@@ -16,7 +16,7 @@ type Reference struct {
 	Sound      string `json:"sound"`
 	Source     string `json:"source"`     // what recorded it, e.g. "MAME 0.289"
 	WAVSHA256  string `json:"wavSha256"`  // of the recording measured
-	StartFrame int    `json:"startFrame"` // measurement starts at the end of this frame
+	StartFrame int    `json:"startFrame"` // measurement starts when this frame's write takes effect
 }
 
 // WriteReference writes ref as JSON, with values rounded to what the tests

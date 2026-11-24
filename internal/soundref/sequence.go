@@ -16,12 +16,18 @@ const FrameRate = 19968000.0 / 4 / 320 / 262
 // ErrSpec is returned for a malformed sequence spec.
 var ErrSpec = errors.New("bad sequence spec")
 
-// Write is one port write in a sequence, at the end of a frame.
+// Write is one port write in a sequence. MAME's Lua frame callback runs a
+// frame late: a write listed at frame f takes effect at the end of frame
+// f + 1 (measured with MAME 0.289: the frame-150 write happens at
+// 2.536026 s, the end of frame 151). Sample returns that moment.
 type Write struct {
 	Frame int
 	Port  byte
 	Value byte
 }
+
+// Sample returns the sample at which the write takes effect, at rate.
+func (w Write) Sample(rate int) int { return SampleAt(w.Frame+1, rate) }
 
 // Sequence is a named series of sound-port writes, Frames long.
 type Sequence struct {

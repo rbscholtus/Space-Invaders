@@ -26,16 +26,26 @@ type astable555 struct {
 // bleedR is the 555's leakage resistance (DEFAULT_555_BLEED_R).
 const bleedR = 10 * mega
 
+// ne555Params are a 555 astable's components and options (MAME's
+// discrete_555_desc and its R1, R2, C inputs).
+type ne555Params struct {
+	r1, r2, c float64
+	vPos      float64 // supply: thresholds at ⅓ and ⅔ of it
+	vCharge   float64 // what the capacitor charges towards
+	vOutHigh  float64 // the output's high level
+	energy    bool    // DISC_555_OUT_ENERGY rather than DISC_555_OUT_SQW
+}
+
 // newAstable555 returns a 555; inReset says whether its reset input is
 // active at power-on, as MAME's reset steps once with it.
-func newAstable555(r1, r2, c, vPos, vCharge, vOutHigh float64, energy, inReset bool, dt float64) *astable555 {
+func newAstable555(p ne555Params, inReset bool, dt float64) *astable555 {
 	a := &astable555{
-		r2: r2, c: c, vCharge: vCharge, vOutHigh: vOutHigh, energy: energy, dt: dt,
-		threshold: vPos * 2 / 3, trigger: vPos / 3, flipFlop: true,
+		r2: p.r2, c: p.c, vCharge: p.vCharge, vOutHigh: p.vOutHigh, energy: p.energy, dt: dt,
+		threshold: p.vPos * 2 / 3, trigger: p.vPos / 3, flipFlop: true,
 		r1: math.NaN(), // forces setR1 to work out the constants
 	}
-	a.setR1(r1)
-	a.step(inReset, r1)
+	a.setR1(p.r1)
+	a.step(inReset, p.r1)
 
 	return a
 }

@@ -146,7 +146,7 @@ func TestAstable555Fleet(t *testing.T) {
 	t.Parallel()
 
 	for i, r1 := range []float64{40 * kilo, 68 * kilo, 82 * kilo, 100 * kilo} {
-		a := newAstable555(r1, 75*kilo, 0.1*micro, 5, 5-0.6, ttlLogic1, true, false, dt)
+		a := newAstable555(ne555Params{r1: r1, r2: 75 * kilo, c: 0.1 * micro, vPos: 5, vCharge: 5 - 0.6, vOutHigh: ttlLogic1, energy: true}, false, dt)
 		out := make([]float64, 2*rate)
 
 		for k := range out {
@@ -162,7 +162,7 @@ func TestAstable555Fleet(t *testing.T) {
 func TestAstable555Bonus(t *testing.T) {
 	t.Parallel()
 
-	a := newAstable555(100*kilo, 47*kilo, 1*micro, 5, 5, 5-1.2, false, true, dt)
+	a := newAstable555(ne555Params{r1: 100 * kilo, r2: 47 * kilo, c: 1 * micro, vPos: 5, vCharge: 5, vOutHigh: 5 - 1.2}, true, dt)
 	out := make([]float64, 4*rate)
 
 	for k := range out {
@@ -183,7 +183,7 @@ func TestAstable555Bonus(t *testing.T) {
 func TestAstable555Stops(t *testing.T) {
 	t.Parallel()
 
-	a := newAstable555(40*kilo, 75*kilo, 0.1*micro, 5, 4.4, ttlLogic1, true, false, dt)
+	a := newAstable555(ne555Params{r1: 40 * kilo, r2: 75 * kilo, c: 0.1 * micro, vPos: 5, vCharge: 4.4, vOutHigh: ttlLogic1, energy: true}, false, dt)
 	for range rate / 10 {
 		a.step(false, 40*kilo)
 	}
@@ -280,7 +280,7 @@ func TestSquareWave(t *testing.T) {
 func TestOpAmpGain(t *testing.T) {
 	t.Parallel()
 
-	a := newOpAmp(680*kilo, 680*kilo, 2.7*mega, 680*kilo, 0, 0, 12, dt)
+	a := newOpAmp(opAmpParams{r1: 680 * kilo, r2: 680 * kilo, r3: 2.7 * mega, r4: 680 * kilo, vP: 12}, dt)
 
 	// Equal inputs: only r3's fixed current, from 11.5 V, pulls down: clamped at 0.
 	if v := a.step(5, 5); v != 0 {
@@ -299,7 +299,7 @@ func TestOpAmpGain(t *testing.T) {
 func TestOpAmpIntegrator(t *testing.T) {
 	t.Parallel()
 
-	a := newOpAmp(0, 1*mega, 0, 0, 1*micro, 0, 12, dt) // 1 M, 1 µF: 10.5 µA → 10.5 V/s
+	a := newOpAmp(opAmpParams{r2: 1 * mega, c: 1 * micro, vP: 12}, dt) // 1 M, 1 µF: 10.5 µA → 10.5 V/s
 
 	var v float64
 
@@ -327,7 +327,7 @@ func TestOneShot(t *testing.T) {
 
 	pulse := func(hold int) int {
 		// The shot's one-shot: R32, R30, R31, R33, R34, C12, C15.
-		s := newOneShot(4.7*mega, 100*kilo, 1*mega, 1*mega, 2.2*mega, 1*micro, 470*pico, 0, 12, dt)
+		s := newOneShot(oneShotWith(1*micro), dt)
 		for range rate / 10 {
 			s.step(0)
 		}
@@ -370,7 +370,7 @@ func TestTVCA(t *testing.T) {
 	t.Parallel()
 
 	// The player-dies VCA: R80, R79, R82, R93, R83, C26.
-	v := newTVCA(2.7*mega, 680*kilo, 680*kilo, 10*kilo, 0, 680*kilo, 1*micro, 0, 12-nortonVBE, 12, trigTrg0, dt)
+	v := newTVCA(tvcaParams{r1: 2.7 * mega, r2: 680 * kilo, r4: 680 * kilo, r5: 10 * kilo, r7: 680 * kilo, c1: 1 * micro, v1: 12 - nortonVBE, vP: 12, f2: trigTrg0}, dt)
 
 	var on float64
 	for range rate / 2 {

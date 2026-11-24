@@ -28,7 +28,7 @@ func setup(t *testing.T, withWAV bool) string {
 	const rate = 48000
 
 	x := make([]float32, 2*rate)
-	for i := soundref.SampleAt(10, rate); i < len(x); i++ {
+	for i := (soundref.Write{Frame: 10}).Sample(rate); i < len(x); i++ {
 		x[i] = float32(0.5 * math.Sin(2*math.Pi*440*float64(i)/rate))
 	}
 
@@ -75,7 +75,7 @@ func TestMeasures(t *testing.T) {
 		t.Errorf("reference header %+v", ref)
 	}
 
-	if d := ref.Duration(); math.Abs(d-(2-10/soundref.FrameRate)) > 0.02 {
+	if d := ref.Duration(); math.Abs(d-(2-11/soundref.FrameRate)) > 0.02 {
 		t.Errorf("duration %.2f s", d)
 	}
 
