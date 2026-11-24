@@ -400,3 +400,52 @@ func TestMixer(t *testing.T) {
 		t.Errorf("mix of 1 V and 1 V = %v, want -3", v)
 	}
 }
+
+// TestUFOSweep: the SN76477's SLF sweeps at the rate MAME's measured
+// formulas give for 1 µF and 120 kΩ (about 7.2 Hz).
+func TestUFOSweep(t *testing.T) {
+	t.Parallel()
+
+	u := newUFO(dt)
+	u.enable(true)
+
+	slf := make([]float64, 2*rate)
+	for i := range slf {
+		u.step()
+		slf[i] = u.slfCap
+	}
+
+	span := snSLFMax - snSLFMin
+	up := span / (0.5885*snSLFRes*snSLFCap + 0.001300)
+	down := span / (0.5413*snSLFRes*snSLFCap + 0.001343)
+	within(t, "SLF", frequency(slf), 1/(span/up+span/down), 0.01)
+}
+
+// TestUFOLevels: disabled, the chip outputs its centre level (0); enabled,
+// a square wave at MAME's measured levels for R amplitude 56 k, R feedback
+// 10 k and a fully open envelope.
+func TestUFOLevels(t *testing.T) {
+	t.Parallel()
+
+	u := newUFO(dt)
+	for range rate / 10 {
+		if v := u.step(); v != 0 {
+			t.Fatalf("disabled output %v, want 0", v)
+		}
+	}
+
+	peak := 3.818*(10.0/56) + 0.03
+	high := (snOutCenter+peak*1.00-snOutLowClip)/(snOutCenter-snOutLowClip) - 1
+	low := (snOutCenter+peak*-0.85-snOutLowClip)/(snOutCenter-snOutLowClip) - 1
+
+	u.enable(true)
+
+	seen := map[float64]bool{}
+	for range rate / 10 {
+		seen[u.step()] = true
+	}
+
+	if len(seen) != 2 || !seen[high] || !seen[low] {
+		t.Errorf("enabled levels %v, want only %v and %v", seen, high, low)
+	}
+}

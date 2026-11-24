@@ -91,9 +91,6 @@ const (
 	maxWaveformShift = 1000 // samples searched for the best waveform alignment
 )
 
-// notYetPorted lists the references whose sound is still missing.
-var notYetPorted = map[string]bool{"ufo": true}
-
 // TestAgainstMAME plays every reference sequence and compares the output
 // with the committed measurements of MAME's recording; with the recording
 // present (scripts/mame-reference.sh), also the waveform itself.
@@ -103,10 +100,6 @@ func TestAgainstMAME(t *testing.T) {
 	for _, seq := range sequences(t) {
 		t.Run(seq.Name, func(t *testing.T) {
 			t.Parallel()
-
-			if notYetPorted[seq.Name] {
-				t.Skip("not ported yet")
-			}
 
 			ref := reference(t, seq.Name)
 			out := render(seq)
