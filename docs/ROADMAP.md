@@ -8,13 +8,19 @@ Milestones for the Go version. The design is in [DESIGN.md](DESIGN.md).
 - Licence (BSD-3), `.gitignore`, `.golangci.yml`, CLAUDE.md, CONTRIBUTING.md,
   DESIGN.md, this roadmap.
 
+## Project setup ✅
+
+- `go.mod` (Go 1.27.4).
+- CI: lint (native + WASM), tests with race detector and coverage, native
+  and WASM builds; `govulncheck` for both builds.
+- Dependabot for Go modules and GitHub Actions.
+
 ## M1: The 8080
 
 - `internal/i8080`: all 256 opcodes, flags, cycles, interrupts, `HLT`.
 - Opcode table and disassembler; `cmd/trace`.
 - `internal/cpm` and `cmd/cputest`; `8080PRE` and `8080EXM` pass.
 - Verify the licences of the exercisers; commit them in `third_party/`.
-- `go.mod`, CI (lint, tests, build), Dependabot.
 
 ## M2: The board, on the desktop
 

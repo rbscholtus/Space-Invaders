@@ -1,0 +1,46 @@
+name: Vulnerabilities
+
+# govulncheck reports known vulnerabilities in the code this app actually
+# calls, for the WASM app and the native build (cmd/ tools included). It
+# also runs weekly, because new advisories appear without any change here.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "41 4 * * 1" # Mondays 04:41 UTC, after the catalogue refresh
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  GOVULNCHECK_VERSION: v1.10.0
+
+jobs:
+  govulncheck:
+    name: govulncheck (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: native
+            goos: ""
+            goarch: ""
+          - target: wasm
+            goos: js
+            goarch: wasm
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      # Installed for the runner itself; GOOS/GOARCH only apply to the scan.
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@$GOVULNCHECK_VERSION
+      - name: govulncheck
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: govulncheck ./...
