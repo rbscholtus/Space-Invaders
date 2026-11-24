@@ -6,28 +6,44 @@ to install**, and on the desktop. It will look like an upright arcade cabinet,
 with the coloured screen overlay and the moon backdrop, and on phones simply
 the screen.
 
-> **Status:** being ported. The plan is in [docs/DESIGN.md](docs/DESIGN.md)
-> and the milestones in [docs/ROADMAP.md](docs/ROADMAP.md). The playable
-> version will be published on GitHub Pages.
+> **Status:** playable on the desktop, without sound yet. The browser
+> version, sound and the cabinet are next. The plan is in
+> [docs/DESIGN.md](docs/DESIGN.md) and the milestones in
+> [docs/ROADMAP.md](docs/ROADMAP.md). The browser version will be published
+> on GitHub Pages.
+
+## Playing it on the desktop
+
+You need [Go](https://go.dev/dl/) 1.27 and your own ROMs (below). On Linux,
+Ebitengine also needs a few system packages (see its install guide).
+
+```sh
+go run ./cmd/invaders -roms path/to/invaders.zip
+```
+
+`-roms` also takes a folder with the four files; by default it looks for
+`roms/invaders.zip`. `-lives 3`…`6` and `-bonus1000` set the DIP switches.
 
 ## ROMs
 
 The game's ROMs are copyrighted, so this project doesn't include or download
 them. You'll need your own copy of the MAME `invaders` ROM set
-(`invaders.zip`, or the files `invaders.h`, `.g`, `.f` and `.e`). Drop it on
-the page and it's remembered for your next visit. Without ROMs, the emulator
-runs a CPU self-test instead.
+(`invaders.zip`, or the files `invaders.h`, `.g`, `.f` and `.e`; renamed
+files are recognised by their contents). In the browser version, you'll
+drop it on the page and it's remembered for your next visit; without ROMs,
+the emulator will run a CPU self-test instead.
 
-## Controls (planned)
+## Controls
 
 | Key | |
 |---|---|
 | `5` or `C` | Insert coin |
 | `1` / `2` | 1 or 2 player start |
-| `←` `→` | Move |
-| `Space` | Fire |
+| `←` `→` (or `A` `D`) | Move |
+| `Space` (or `↑`, `W`) | Fire |
+| `P` | Pause (also when the window isn't in front) |
 
-On touch screens, the cabinet's buttons and coin slot are the controls.
+On touch screens, the cabinet's buttons and coin slot will be the controls.
 
 ## The Java version
 

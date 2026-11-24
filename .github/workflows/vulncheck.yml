@@ -14,7 +14,9 @@ on:
 permissions:
   contents: read
 
+# Ebitengine's native build on Linux needs these headers (cgo: GLFW, OpenGL, ALSA).
 env:
+  EBITEN_DEPS: libasound2-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev
   GOVULNCHECK_VERSION: v1.10.0
 
 jobs:
@@ -36,6 +38,9 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
+      - name: Install Ebitengine dependencies
+        if: matrix.target == 'native'
+        run: sudo apt-get update && sudo apt-get install -y $EBITEN_DEPS
       # Installed for the runner itself; GOOS/GOARCH only apply to the scan.
       - name: Install govulncheck
         run: go install golang.org/x/vuln/cmd/govulncheck@$GOVULNCHECK_VERSION

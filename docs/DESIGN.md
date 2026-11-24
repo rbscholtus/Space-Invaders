@@ -111,7 +111,7 @@ Don't port them; each one gets a test in the Go version (§15).
 | ROM (`0x0000–0x1FFF`) is writable | Writes to ROM are ignored. |
 | `writeWord` skips the pixel update | All writes to video RAM update the screen (or, better, the screen is built from video RAM each frame, §10). |
 | Port 1 bit 3 is 0 | It always reads 1. |
-| Coin bit clears when read | Hold the coin bit for a few frames, as a real coin switch does (§13). |
+| Coin bit clears when read, and is active high | The coin switch is active low (§7.2): hold the bit at 0 for a few frames, as a real coin switch does (§13). |
 | Mid-screen interrupt at half the frame's cycles | At the scanline where the hardware fires it (§8). |
 | Sounds trigger on a level, march sounds restart on every write | Trigger on the 0→1 edge of each bit; the UFO loops while its bit is held (§14). |
 | Amplifier enable (port 3 bit 5) ignored | All sound is muted while it's 0. |
@@ -281,9 +281,9 @@ and jumps to `n*8` (11 cycles). When they're disabled, the request is
 ignored; Space Invaders keeps them enabled except in short critical sections,
 and the board re-raises its request each frame anyway. `EI` takes effect
 after the *next* instruction (so `EI; RET` returns before an interrupt is
-taken). ⚠ verify the `EI` delay against the Intel manual: implemented and
-tested (`TestEIDelay`), but the exercisers don't cover it, and the scanned
-manual found online has no text layer to check it against.
+taken). Source: Intel 8080 Microcomputer Systems User's Manual (98-153B,
+September 1975), p. 4-13: "The interrupt system is enabled following the
+execution of the next instruction." Tested by `TestEIDelay`.
 
 ## 7. The Space Invaders board
 
@@ -291,6 +291,8 @@ Midway's 8080 board (1978), also used by other Midway/Taito games. CPU clock
 19.968 MHz / 10 = **1.9968 MHz**.
 
 ### 7.1 Memory map
+
+Source: MAME `src/mame/midw8080/mw8080bw.cpp`, `main_map` (§18).
 
 | Address | Size | Contents |
 |---|---|---|
@@ -300,36 +302,54 @@ Midway's 8080 board (1978), also used by other Midway/Taito games. CPU clock
 | `0x1800–0x1FFF` | 2 KB | ROM `invaders.e` |
 | `0x2000–0x23FF` | 1 KB | Work RAM (stack at the top, near `0x2400`) |
 | `0x2400–0x3FFF` | 7 KB | Video RAM, 1 bit per pixel (§10) |
-| `0x4000–` | | Mirrors. ⚠ verify the decoding in MAME's `mw8080bw` memory map; the game is known to read/write slightly beyond `0x3FFF` in some situations. |
+| `0x4000–0x5FFF` | 8 KB | Unused ROM space: reads 0, writes ignored |
+| `0x6000–0x7FFF` | 8 KB | Mirror of the RAM at `0x2000–0x3FFF` |
+| `0x8000–0xFFFF` | | Mirror of `0x0000–0x7FFF` (address line 15 is not decoded) |
 
-Writes to ROM are ignored. Memory is one flat 16 KB array; `Read`/`Write`
-mask the address according to the map.
+Writes to ROM are ignored. `Read`/`Write` mask the address with `0x7FFF`,
+then map it as above, so all 8 KB of RAM (work + video) is mirrored as a
+whole, not per 1 KB as in the Java version (§3).
 
 ### 7.2 Input ports
 
+Source: MAME `mw8080bw.cpp`, `INPUT_PORTS_START( invaders )` and
+`invaders_state::io_map`. Port numbers are decoded with 3 bits, so port
+`n + 4` reads as port `n` (only ports 0–3 are read).
+
 | Port | Bit | Meaning |
 |---|---|---|
-| 1 | 0 | Coin (credit), 1 = coin inserted |
+| 0 | 0 | DIP switch 8 (unused), 0 |
+| 0 | 1–2 | DIP switches 6 and 7 (unused), 0 |
+| 0 | 3 | Always 1 |
+| 0 | 4 | P1 fire |
+| 0 | 5 | P1 left |
+| 0 | 6 | P1 right |
+| 0 | 7 | DIP switch 5 (unused), 0 |
+| 1 | 0 | Coin, **active low**: 1 at rest, 0 while a coin goes in |
 | 1 | 1 | 2P start |
 | 1 | 2 | 1P start |
 | 1 | 3 | Always 1 |
 | 1 | 4 | P1 fire |
 | 1 | 5 | P1 left |
 | 1 | 6 | P1 right |
-| 1 | 7 | Unused |
+| 1 | 7 | Unused, 0 |
 | 2 | 0–1 | DIP: lives, 00 = 3, 01 = 4, 10 = 5, 11 = 6 |
-| 2 | 2 | Tilt |
+| 2 | 2 | Tilt in the software, but not connected on the Midway board (MAME); reads 0 |
 | 2 | 3 | DIP: bonus life at 1000 (1) or 1500 (0) |
-| 2 | 4 | P2 fire |
-| 2 | 5 | P2 left |
-| 2 | 6 | P2 right |
+| 2 | 4 | P2 fire (upright board: wired to P1's controls) |
+| 2 | 5 | P2 left (same) |
+| 2 | 6 | P2 right (same) |
 | 2 | 7 | DIP: coin info shown in attract mode, 0 = on |
 | 3 | 0–7 | Shift register result (§7.4) |
 
-Port 0 is read by the game but has no function on Space Invaders. ⚠ verify
-which bits port 0 returns (MAME documents it).
+The game reads port 0, but Space Invaders doesn't use it. The coin polarity
+is confirmed by the game code: the VBLANK handler (`RST 2`, `0x0010`) reads
+port 1 and adds a credit when bit 0 drops from 1 to 0.
 
 ### 7.3 Output ports
+
+Source: MAME `invaders_state::io_map` and `invaders_audio_device::p1_w`,
+`p2_w` (`mw8080bw_a.cpp`).
 
 | Port | Bits | Meaning |
 |---|---|---|
@@ -340,11 +360,13 @@ which bits port 0 returns (MAME documents it).
 | 3 | 3 | Invader dies |
 | 3 | 4 | Extended play (bonus life) |
 | 3 | 5 | Amplifier enable |
+| 3 | 6–7 | Not connected |
 | 4 | 0–7 | Shift register data (§7.4) |
 | 5 | 0–3 | Fleet movement, notes 1–4 |
 | 5 | 4 | UFO hit |
-| 5 | 5 | Flip screen (cocktail cabinet, player 2's turn) |
-| 6 | – | Watchdog reset |
+| 5 | 5 | Flip screen; only wired on the cocktail board |
+| 5 | 6–7 | Not connected |
+| 6 | – | Watchdog reset: the board resets the CPU if 255 frames pass without one |
 
 ### 7.4 Shift register
 
@@ -359,35 +381,45 @@ any x position.
 ### 7.5 DIP switches and settings
 
 The board's DIP switches (lives, bonus life, coin info) are settings in the
-app, stored in preferences, and applied on the next power-on. Defaults: 3
-lives, bonus at 1500, coin info on (the factory setting, ⚠ verify).
+app, stored in preferences, and applied on the next power-on. Defaults, as
+in MAME: 3 lives, bonus at 1500, coin info on.
 
 ## 8. Timing
 
-**The video frame** (⚠ verify against MAME's `mw8080bw` constants):
+**The video frame** (MAME `mw8080bw.h`, `MW8080BW_*` constants, and the
+timing notes at the top of `mw8080bw.cpp`):
 
 - Pixel clock 19.968 MHz / 4 = 4.992 MHz; 320 pixels per line; 262 lines.
 - Frame rate 4,992,000 / (320 × 262) = **59.54 Hz**.
 - CPU cycles per line: 1,996,800 / (59.54 × 262) = **128**; per frame
   **33,536**. (One CPU cycle is 2.5 pixels.)
-- 224 visible lines; the rest is vertical blank.
+- 224 visible lines (0–223); vertical blank from line 224.
 
 **Interrupts:** two per frame.
 
-- `RST 1` (`0xCF`) when the beam is in the middle of the visible picture. The
+- `RST 1` (`0xCF`) at **line 96**, in the middle of the visible picture. The
   game then updates the objects in the top half, which the beam has already
   drawn.
-- `RST 2` (`0xD7`) at the start of vertical blank. The game updates the
-  bottom half.
+- `RST 2` (`0xD7`) at **line 224**, the start of vertical blank. The game
+  updates the bottom half.
 
-⚠ verify the exact line numbers (MAME triggers on vertical counter values; the
-common description is "line 96" and "line 224").
+Source: MAME `mw8080bw.cpp`, "Interrupts" and `interrupt_trigger`: the
+vertical counter values `0x80` and `0xDA` correspond to lines 96 and 224,
+and the vector is `0xC7 | (64V << 4) | (!64V << 3)`.
+
+The INT line is a flip-flop that stays set until the CPU accepts the
+interrupt. MAME raises it only when interrupts are enabled at that moment
+(otherwise the request is lost), and keeps it raised until accepted, so a
+request that arrives during the instruction after `EI` is taken one
+instruction later. The board does the same: when its line comes, it raises
+the request if `IntEnabled`, and offers it before every instruction until the
+CPU accepts it.
 
 **In the emulator:**
 
 - `board.RunFrame()` runs the frame line by line: 262 × 128 cycles, carrying
   each instruction's overshoot into the next line, and raises each interrupt
-  at its line. This replaces the Java version's two half-frames.
+  at its line. A frame starts at line 0, the top of the picture. This replaces the Java version's two half-frames.
 - **One emulated frame per `Update`.** Ebitengine runs `Update` at 60 Hz, the
   game at 59.54 Hz, so the game runs 0.8% fast. Nobody can hear or see 0.8%,
   and it avoids the judder of skipping one `Update` in 130. Audio follows the
@@ -404,16 +436,18 @@ common description is "line 96" and "line 224").
 
 The MAME set **`invaders`** (Space Invaders, Midway, 1978): four 2 KB files.
 
-| File | Address | CRC-32 |
-|---|---|---|
-| `invaders.h` | `0x0000` | `734f5ad8` ⚠ verify |
-| `invaders.g` | `0x0800` | `6bfaca4a` ⚠ verify |
-| `invaders.f` | `0x1000` | `0ccead96` ⚠ verify |
-| `invaders.e` | `0x1800` | `14e538b0` ⚠ verify |
+| File | MAME name | Address | CRC-32 | SHA-1 |
+|---|---|---|---|---|
+| `invaders.h` | `9316b-0869_m739h.h1` | `0x0000` | `734f5ad8` | `ff6200af4c9110d8181249cbcef1a8a40fa40b7f` |
+| `invaders.g` | `9316b-0856_m739g.g1` | `0x0800` | `6bfaca4a` | `16f48649b531bdef8c2d1446c429b5f414524350` |
+| `invaders.f` | `9316b-0855_m739f.f1` | `0x1000` | `0ccead96` | `537aef03468f63c5b9e11dd61e253f7ae17d9743` |
+| `invaders.e` | `9316b-0854_m739e.e1` | `0x1800` | `14e538b0` | `1d6ca0c99f9df71e2990b610deb9d7da0125e2d8` |
 
-Verify the CRCs (and add SHA-1s) from MAME's driver source before shipping;
-the table becomes `internal/romset/sets.go`. Other versions (Taito's `sitv`,
-`sicv`, ...) may be added later, each with its own table.
+Source: MAME `mw8080bw.cpp`, `ROM_START( invaders )`. Older MAME sets name
+the files `invaders.h` ... `invaders.e`; current MAME uses the chip names.
+`romset` matches by CRC-32, so both work. The table becomes
+`internal/romset/sets.go`. Other versions (Taito's `sitv`, `sicv`, ...) may
+be added later, each with its own table.
 
 ### 9.2 Bringing your own
 
@@ -453,11 +487,16 @@ their licence and source, like Chippie's test-suite ROMs.
 ## 10. Video
 
 - **Resolution:** 256 × 224, 1 bit per pixel, 32 bytes per row, 224 rows.
-- **Rotated monitor:** the monitor is mounted turned 90° anticlockwise, so the
+- **Rotated monitor:** the monitor is mounted turned 90° anticlockwise (MAME
+  `ROT270`), so the
   player sees **224 wide × 256 tall**. Byte `i` of video RAM (`0x2400 + i`)
   holds pixels of memory row `i / 32`, x = `(i % 32) * 8 + bit`, with bit 0 the
   leftmost in memory. On screen: column `x_screen = i / 32`, row
   `y_screen = 255 - ((i % 32) * 8 + bit)`.
+- **A 4-pixel offset:** the video hardware reads each byte 4 pixels late,
+  so MAME's picture is 260 pixels wide, with the 256 pixels of video RAM
+  after 4 black ones (`screen_update_invaders`, `mw8080bw_v.cpp`). The
+  emulator shows the 256 pixels; the offset is only a border.
 - **Build the picture once per frame from video RAM,** not on every write.
   It's 7 KB, and converting per frame keeps the board free of display code
   and makes golden frames trivial (§15.3). `invaders.Board.Video()` returns a
@@ -492,9 +531,18 @@ their licence and source, like Chippie's test-suite ROMs.
 The original monitor is black and white. Coloured cellophane strips on the
 screen tint parts of it: a **red** strip near the top (where the UFO flies)
 and a **green** strip at the bottom (shields and player), including the
-lives area at the bottom left. In the Java version: red for screen rows
-32–63, green for rows 184–239, and green for row 240+ when x is 16–133.
-⚠ verify against photos of real cabinets and MAME's artwork.
+lives area at the bottom left. From MAME's `layout/invaders.lay` (CC0), in
+screen pixels:
+
+| Strip | Columns | Rows | Lit pixels multiplied by (R, G, B) |
+|---|---|---|---|
+| Red | 0–223 | 32–61 | 1, 0.125, 0.125 |
+| Green | 0–223 | 184–239 | 0.125, 1, 0.125 |
+| Green (lives) | 16–133 | 240–255 | 0.125, 1, 0.125 |
+
+The strips are tints, not pure colours: they let a little of the other
+colours through. The Java version had the red strip at rows 32–63. Until
+the shaders (M5), `internal/app/overlay` paints the picture on the CPU.
 
 The overlay is a small texture (or a list of rectangles) sampled by the
 shader, so a different overlay (e.g. the Taito version's) is data, not code.
@@ -539,24 +587,25 @@ starting point, adjusted for a rotated, vertical picture.
 | `2` | 2P start |
 | `←` `→` (or `A` `D`) | Move |
 | `Space` (or `↑`, `W`) | Fire |
-| `T` | Tilt |
+| `T` | Tilt (not wired on the Midway board, §7.2; for testing) |
 | `P` | Pause |
 | `V` | Switch view |
 | `F1` | Stats overlay |
 
 **Coins:**
 
-- A coin is a pulse: `Update` sets port 1 bit 0 for a few frames (⚠ tune;
-  the game counts the switch's edge and debounces it), then clears it. Holding
+- A coin is a pulse: each new press of the coin key closes the coin switch
+  (port 1 bit 0 reads 0, §7.2) for 5 frames (`input.CoinFrames`); the game
+  adds the credit on the first. Holding the key inserts one coin
+  (`TestROMCoinNeedsAnEdge`). Holding
   the key inserts one coin; each new press inserts another.
 - In cabinet view, the coin slot on the coin door is clickable/tappable, with
   a short coin-drop animation and sound.
 - In screen view, a coin button sits with the touch controls.
 
 **Two players:** on an upright cabinet both players use the same controls,
-taking turns; the game reads player 2's bits (port 2) only in cocktail mode
-⚠ verify in the disassembly. By default, the same keys drive both players'
-bits, so it doesn't matter.
+taking turns: the upright board wires port 2's player 2 bits to player 1's
+controls (MAME `invaders_in2_control_r`). The emulator does the same.
 
 **Touch:** in screen view, on-screen left/right/fire, coin, 1P and 2P.
 In cabinet view, the cabinet's own buttons are the controls. Multi-touch,
@@ -565,15 +614,18 @@ so moving and firing work together (as in Chippie's remote).
 **Gamepads:** Ebitengine's standard gamepad layout: d-pad/stick to move, A to
 fire, Select = coin, Start = 1P start.
 
-**Tilt:** the tilt switch ends the current game, as on the real cabinet.
+**Tilt:** the game software handles a tilt bit (port 2 bit 2), but the
+Midway board doesn't connect it (MAME). The `T` key sets it anyway, as a
+debugging aid; the real cabinet had no tilt.
 
 ## 14. Sound
 
 ### 14.1 Why synthesis, not samples
 
 The original sounds are made by analog circuits on the sound board (Midway's
-discrete circuits and an SN76477 sound chip ⚠ verify which sounds use the
-SN76477). MAME historically used recorded samples, then modelled the circuits.
+discrete circuits, and an SN76477 sound chip for the UFO only: MAME's
+`invaders_audio_device::p1_w` drives the SN76477 from port 3 bit 0 and
+everything else from discrete circuits). MAME historically used recorded samples, then modelled the circuits.
 
 | Approach | Pros | Cons |
 |---|---|---|
@@ -667,7 +719,9 @@ about 27 s (Apple M-series, Go 1.27.4, about 870 MHz emulated).
   `internal/invaders/testdata/golden/`. Without ROMs they're skipped with a
   clear message. The goldens are 1-bit pictures of copyrighted screens, so
   they are stored as hashes plus a local `.png` that's never committed
-  ⚠ decide: hashes only in git, or no goldens in git at all.
+  ⚠ decide: hashes only in git, or no goldens in git at all. Deferred until
+  the game runs (ROADMAP: after M2); until then, board tests (above) and a
+  ROM smoke test cover the board.
 - **Never weaken a golden to make a test pass.** Fix the emulator, or explain
   in the PR why the golden was wrong.
 
@@ -745,12 +799,14 @@ Dependabot for Go modules, npm (Playwright) and Actions.
 
 ## 18. References
 
-- **Intel 8080 Microcomputer Systems User's Manual** (1975) and the **8080
-  Assembly Language Programming Manual**: instruction behaviour, flags,
-  cycle counts.
-- **MAME source**, `src/mame/midw8080/mw8080bw.cpp` and `mw8080bw_a.cpp`:
-  memory map, ports, video timing, interrupt lines, DIP switches, sound
-  circuits, ROM CRCs. ⚠ verify the paths.
+- **Intel 8080 Microcomputer Systems User's Manual** (98-153B, September
+  1975), chapter 4 (instruction set, with states per instruction), and the
+  **8080 Assembly Language Programming Manual**: instruction behaviour,
+  flags, cycle counts. Keep local copies in `docs/` (git-ignored).
+- **MAME source**, `src/mame/midw8080/`: `mw8080bw.cpp` and `mw8080bw.h`
+  (memory map, ports, video timing, interrupt lines, DIP switches, ROM CRCs),
+  `mw8080bw_v.cpp` (video), `mw8080bw_a.cpp` (sound circuits). Checked at
+  commit `11f90a3`, the latest to touch `mw8080bw.cpp` at the time.
 - **Computer Archeology, Space Invaders**: a fully commented disassembly
   and hardware notes.
 - **Emulator 101** (emulator101.com): a step-by-step Space Invaders emulator

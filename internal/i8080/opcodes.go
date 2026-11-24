@@ -18,9 +18,10 @@ func Op(op byte) OpInfo {
 }
 
 // opTable holds every opcode's mnemonic, length and cycles. Cycle counts are
-// the "states" in the Intel 8080 Assembly Language Programming Manual (1975),
-// cross-checked against java/src/i8080/I8080OpInfo.java. Conditional calls
-// take 11/17 cycles and conditional returns 5/11 (DESIGN §6.1).
+// the "states" in the Intel 8080 Microcomputer Systems User's Manual
+// (98-153B, 1975), chapter 4, cross-checked against
+// java/src/i8080/I8080OpInfo.java. Conditional calls take 11/17 cycles and
+// conditional returns 5/11 (DESIGN §6.1).
 //
 //nolint:gochecknoglobals,goconst // a read-only table indexed on every Step; repeated mnemonics are data
 var opTable = [256]OpInfo{

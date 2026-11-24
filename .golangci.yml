@@ -83,6 +83,13 @@ linters:
           deny:
             - pkg: net/http
               desc: "use platform.Fetch; net/http adds ~1.7 MB gzip to the WASM"
+        no-ebitenutil:
+          list-mode: lax
+          files:
+            - $all
+          deny:
+            - pkg: github.com/hajimehoshi/ebiten/v2/ebitenutil
+              desc: "imports net/http (~1.7 MB gzip in the WASM build); draw text with our own font"
         testrig-only-in-tests:
           list-mode: lax
           files:
