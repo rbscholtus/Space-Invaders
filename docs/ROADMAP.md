@@ -83,6 +83,10 @@ Milestones for the Go version. The design is in [DESIGN.md](DESIGN.md).
   address in the disassembly).
 - Desktop release binaries (`release.yml`).
 - Cocktail cabinet view, using the flip bit.
+- A flag (and setting) to choose the Midway or the Taito sound board. MAME
+  notes where the Taito PCB differs (the shot's C12 is 0.22 µF and R13
+  2.2 MΩ, and its VCO circuit isn't fully modelled), so the shot would
+  change; needs Taito reference recordings to test against.
 - Other games on the Midway 8080 board.
 - Codeberg mirror (DESIGN §17.3).
 - A TinyGo build with a minimal web frontend, if download size ever matters.

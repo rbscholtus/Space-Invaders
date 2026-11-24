@@ -161,6 +161,43 @@ Go file is `assets/assets.go`, which embeds the data around it (DESIGN §5).
   (native), the WASM build, and the native build all pass. 8080EXM is
   skipped under `-short`, because it takes many minutes with `-race`.
 
+## Running tests
+
+All from the repository root. "ROMs" means your own set in
+`roms/invaders.zip` or `INVADERS_ROMS`; "MAME" means MAME installed and the
+recordings made with `scripts/mame-reference.sh`. Tests that need either
+skip without it, so CI runs the rest. The package goes before a test's own
+flags (`-update`, `-listen`).
+
+| What | Command | Needs |
+|---|---|---|
+| Everything (as before a push) | `go test ./...` | — (ROM and MAME tests skip) |
+| Quick | `go test -short ./...` | — (skips 8080EXM, ~30 s) |
+| Race detector (as CI) | `go test -race -short ./...` | — |
+| CPU exercisers | `go test ./internal/cpm -run Test8080 -v` | — |
+| ROM smoke tests, golden frames, game sound | `go test ./internal/invaders ./internal/app/sound -v` | ROMs |
+| Sound against MAME (measurements; waveforms with the recordings) | `go test ./internal/synth -run TestAgainstMAME -v` | — (waveforms: MAME) |
+| Whole session against MAME | `go test ./internal/synth -run TestSessionAgainstMAME -v` | ROMs, MAME (`session`) |
+| Listen: our sounds next to MAME's | `go test ./internal/synth -run TestListen -listen`, then compare `internal/synth/testdata/listen/*.wav` with `internal/synth/testdata/reference/wav/*.wav` | — (MAME's: MAME) |
+| Benchmarks | `go test -run NONE -bench . ./internal/...` | — |
+| Coverage | `go test -coverpkg=./... -coverprofile=coverage.out ./... && go tool cover -func=coverage.out` | — |
+| Lint | `golangci-lint run && GOOS=js GOARCH=wasm golangci-lint run` | — |
+
+Regenerating goldens and references (check the result before committing,
+DESIGN §15):
+
+| What | Command |
+|---|---|
+| Golden frames (pictures in `testdata/golden/png/`) | `go test ./internal/invaders -run TestGoldenSession -update` |
+| Disassembly | `go test ./internal/i8080 -run TestDisassembleGolden -update` |
+| Exerciser output | `go test ./internal/cpm -run Test8080 -update` |
+| MAME sound recordings, then their measurements | `scripts/mame-reference.sh`, then `go run ./cmd/soundref` |
+| MAME session recording | `scripts/mame-reference.sh session` |
+
+Tools: `go run ./cmd/cputest third_party/8080-exercisers/8080EXM.COM` runs
+an exerciser; `go run ./cmd/trace -n 100 FILE.COM` traces one instruction
+per line.
+
 ## Code and data from others
 
 - **Ported or copied code keeps its licence notice** and is listed in

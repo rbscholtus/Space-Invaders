@@ -901,6 +901,10 @@ golangci-lint run && GOOS=js GOARCH=wasm golangci-lint run
 ./scripts/build.sh && (cd web/dist && python3 -m http.server 8080)
 ```
 
+Every test command (ROM tests, the sound against MAME, listening,
+regenerating goldens and references) is listed in CONTRIBUTING, "Running
+tests".
+
 `scripts/build.sh`, as in Chippie: build `invaders.wasm` with
 `-trimpath -ldflags="-s -w"`, gzip it as `invaders-gz.wasm`, inline
 `wasm_exec.js` into the loader page, copy the exercisers (with licence and
