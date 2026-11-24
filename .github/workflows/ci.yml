@@ -8,8 +8,12 @@ on:
 permissions:
   contents: read
 
-# Ebitengine's apt dependencies, the browser build (scripts/build.sh, size
-# budget) and the Playwright job come back when the app does (ROADMAP M2, M4).
+# Ebitengine's native build on Linux needs these headers (cgo: GLFW, OpenGL, ALSA).
+# The browser build (scripts/build.sh, size budget) and the Playwright job
+# come in M4.
+env:
+  EBITEN_DEPS: libasound2-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev
+
 jobs:
   lint:
     name: Lint (${{ matrix.target }})
@@ -29,6 +33,9 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
+      - name: Install Ebitengine dependencies
+        if: matrix.target == 'native'
+        run: sudo apt-get update && sudo apt-get install -y $EBITEN_DEPS
       - uses: golangci/golangci-lint-action@v9
         env:
           GOOS: ${{ matrix.goos }}
@@ -44,8 +51,10 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
+      - name: Install Ebitengine dependencies
+        run: sudo apt-get update && sudo apt-get install -y $EBITEN_DEPS xvfb
       - name: Test (race)
-        run: go test -race -short -coverpkg=./... -coverprofile=coverage.out ./...
+        run: xvfb-run -a go test -race -short -coverpkg=./... -coverprofile=coverage.out ./...
       # 8080EXM runs 23.8 billion cycles: ~30 s natively, far longer with
       # -race, and the CPU has no concurrency to race on (DESIGN §15.2).
       - name: CPU exercisers
@@ -67,6 +76,8 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
+      - name: Install Ebitengine dependencies
+        run: sudo apt-get update && sudo apt-get install -y $EBITEN_DEPS
       - name: Native
         run: go build ./...
       - name: WebAssembly
