@@ -26,14 +26,3 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
---------------------------------------------------------------------------------
-
-This licence covers Chippie's own source code. Files under assets/,
-web/hosted-roms/ and third_party/, and the ROMs Chippie downloads, have their
-own origins and terms, listed in assets/LICENSES.md.
-
-The TV artwork (assets/tv/) was AI-generated using Google Gemini and is free
-to use and distribute. Because AI-generated images lack copyright under US
-law, it is believed to be in the public domain and is distributed here
-without copyright restrictions.
