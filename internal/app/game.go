@@ -5,11 +5,15 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
+	"github.com/rbscholtus/Space-Invaders/internal/app/demo"
+	"github.com/rbscholtus/Space-Invaders/internal/app/font"
 	"github.com/rbscholtus/Space-Invaders/internal/app/input"
 	"github.com/rbscholtus/Space-Invaders/internal/app/overlay"
 	"github.com/rbscholtus/Space-Invaders/internal/app/romscreen"
@@ -32,6 +36,17 @@ const (
 // cacheKey is the remembered ROM image's key: the MAME set's name.
 const cacheKey = "invaders"
 
+// The CPU-test demo (DESIGN §9.4) gets a share of each frame: its cycle
+// count is adjusted to stay near the time budget.
+const (
+	demoProgram    = "8080EXM.COM"
+	demoBudget     = 6 * time.Millisecond
+	demoFastBudget = 40 * time.Millisecond // Options.DemoFast, for the browser tests
+	demoMinCycles  = 10_000
+	demoMaxCycles  = 400_000_000
+	textRows       = screenH / font.CellHeight
+)
+
 // Options are the player's settings.
 type Options struct {
 	// ROMs is a checked ROM image (the -roms flag), or nil: the remembered
@@ -39,6 +54,9 @@ type Options struct {
 	ROMs   []byte
 	DIPs   invaders.DIPs
 	Volume float64 // 0–1
+	// DemoFast gives the CPU-test demo most of each frame, so it shows
+	// results sooner (?demo=fast, for the browser tests).
+	DemoFast bool
 	// OnError is told about problems that don't stop the game, such as
 	// no audio device (the game then runs silently).
 	OnError func(error)
@@ -64,6 +82,11 @@ type Game struct {
 	incoming chan platform.Picked // dropped or picked files, read in goroutines
 	picking  bool                 // the file picker is open
 	state    string               // the last state published for the browser tests
+
+	demo        *demo.Demo
+	demoProgram chan []byte // the exerciser, read in a goroutine
+	demoCode    []byte      // kept to restart the demo after F
+	demoCycles  uint64
 
 	frames     *sound.Frames
 	stream     *sound.Stream
@@ -93,14 +116,17 @@ func New(opts Options) *Game {
 		cache:    platform.NewCache(),
 		restored: make(chan restored, 1),
 		incoming: make(chan platform.Picked, 1),
-		frames:   sound.NewFrames(),
-		stream:   sound.NewStream(opts.Volume),
-		painter:  overlay.NewPainter(overlay.Midway()),
-		screen:   make([]byte, screenW*screenH),
-		rgba:     make([]byte, screenW*screenH*4),
-		picture:  ebiten.NewImage(screenW, screenH),
-		dirty:    true,
-		scale:    1,
+
+		demoProgram: make(chan []byte, 1),
+		demoCycles:  demoMinCycles,
+		frames:      sound.NewFrames(),
+		stream:      sound.NewStream(opts.Volume),
+		painter:     overlay.NewPainter(overlay.Midway()),
+		screen:      make([]byte, screenW*screenH),
+		rgba:        make([]byte, screenW*screenH*4),
+		picture:     ebiten.NewImage(screenW, screenH),
+		dirty:       true,
+		scale:       1,
 	}
 
 	if opts.ROMs != nil {
@@ -112,6 +138,15 @@ func New(opts Options) *Game {
 			g.restored <- restored{image, found, err}
 		}()
 	}
+
+	go func() {
+		code, err := platform.ReadExerciser(context.Background(), demoProgram)
+		if err != nil {
+			code = nil // no demo: the ROM screen alone
+		}
+
+		g.demoProgram <- code
+	}()
 
 	return g
 }
@@ -146,8 +181,14 @@ func (g *Game) Update() error {
 	}
 
 	if g.board == nil {
+		g.runDemo()
 		clear(g.screen)
 		g.flow.Draw(g.screen, screenW)
+
+		if g.demo != nil {
+			first := g.flow.Rows() + 1
+			g.demo.Draw(g.screen, screenW, first, textRows-first)
+		}
 	} else {
 		g.board.SetInputs(g.controls.Update(keys()))
 		g.board.RunFrame()
@@ -271,6 +312,48 @@ func (g *Game) handleROMs() {
 	}
 }
 
+// runDemo runs the CPU-test demo for this frame's share of time, adjusting
+// its cycle count to the budget.
+func (g *Game) runDemo() {
+	select {
+	case code := <-g.demoProgram:
+		g.demoCode = code
+		g.restartDemo()
+	default:
+	}
+
+	if g.demo == nil || g.demo.Done() {
+		return
+	}
+
+	budget := demoBudget
+	if g.settings.DemoFast {
+		budget = demoFastBudget
+	}
+
+	start := time.Now()
+
+	g.demo.Run(g.demoCycles)
+
+	switch took := time.Since(start); {
+	case took < budget/2:
+		g.demoCycles = min(g.demoCycles*5/4+1, demoMaxCycles)
+	case took > budget:
+		g.demoCycles = max(g.demoCycles*4/5, demoMinCycles)
+	}
+}
+
+// restartDemo starts the demo from the beginning, if there is a program.
+func (g *Game) restartDemo() {
+	g.demo = nil
+
+	if g.demoCode != nil {
+		if d, err := demo.New(g.demoCode); err == nil {
+			g.demo = d
+		}
+	}
+}
+
 // startBoard powers on a board with the image, with fresh sound.
 func (g *Game) startBoard(image []byte) {
 	board, err := invaders.New(image, g.settings.DIPs)
@@ -283,6 +366,7 @@ func (g *Game) startBoard(image []byte) {
 	g.board = board
 	g.controls = input.Controls{}
 	g.frames = sound.NewFrames()
+	g.demo = nil
 }
 
 // remember stores the image for the next visit, in the background.
@@ -300,6 +384,7 @@ func (g *Game) forget() {
 	g.board = nil
 	g.frames = sound.NewFrames()
 	g.flow.Forget()
+	g.restartDemo()
 
 	go func() {
 		if err := g.cache.Delete(cacheKey); err != nil {
@@ -322,10 +407,16 @@ func (g *Game) report(err error) {
 // publishState puts the app's state on the page for the browser tests,
 // when it changes.
 func (g *Game) publishState() {
+	var lines []string
+	if g.demo != nil {
+		lines = g.demo.Lines()
+	}
+
 	state, err := json.Marshal(struct {
-		Mode    string `json:"mode"`
-		Message string `json:"message"`
-	}{g.flow.Mode().String(), g.flow.Message()})
+		Mode    string   `json:"mode"`
+		Message string   `json:"message"`
+		Demo    []string `json:"demo"`
+	}{g.flow.Mode().String(), g.flow.Message(), lines})
 	if err != nil || string(state) == g.state {
 		return
 	}

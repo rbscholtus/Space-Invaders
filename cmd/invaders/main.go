@@ -18,6 +18,7 @@ import (
 
 	"github.com/rbscholtus/Space-Invaders/internal/app"
 	"github.com/rbscholtus/Space-Invaders/internal/invaders"
+	"github.com/rbscholtus/Space-Invaders/internal/platform"
 	"github.com/rbscholtus/Space-Invaders/internal/romset"
 )
 
@@ -83,11 +84,19 @@ func cli(args []string, stderr io.Writer, run func(app.Options) error) int {
 		return exitFail
 	}
 
+	// In the browser, the page's URL can set the volume and the demo's
+	// speed (platform.URLParams); on the desktop it gives nothing.
+	params := platform.URLParams()
+	if params.Volume >= 0 {
+		*volume = params.Volume
+	}
+
 	opts := app.Options{
-		ROMs:    image,
-		DIPs:    invaders.DIPs{Lives: *lives, BonusAt1000: *bonus1000},
-		Volume:  float64(*volume) / maxVolume,
-		OnError: func(err error) { fmt.Fprintln(stderr, "invaders:", err) },
+		ROMs:     image,
+		DemoFast: params.Demo == platform.DemoFast,
+		DIPs:     invaders.DIPs{Lives: *lives, BonusAt1000: *bonus1000},
+		Volume:   float64(*volume) / maxVolume,
+		OnError:  func(err error) { fmt.Fprintln(stderr, "invaders:", err) },
 	}
 
 	if err := run(opts); err != nil {
