@@ -619,6 +619,8 @@ starting point, adjusted for a rotated, vertical picture.
 | `Space` (or `↑`, `W`) | Fire |
 | `T` | Tilt (not wired on the Midway board, §7.2; for testing) |
 | `P` | Pause |
+| `M` | Mute |
+| `-` / `=` | Volume down / up (10% steps; `-volume 0–100` at start, default 50) |
 | `V` | Switch view |
 | `F1` | Stats overlay |
 
@@ -684,7 +686,7 @@ From MAME's `mw8080bw_a.cpp` (invaders section, Midway board values):
 
 | Sound | Trigger | Circuit (MAME blocks) |
 |---|---|---|
-| Noise | always running | 17-bit LFSR clocked at 7515 Hz (`LFSR_NOISE`, `midway_lfsr`), used by the shot and the player's explosion |
+| Noise | always running | 17-bit LFSR (bit 4 XOR bit 16) clocked at 7515 Hz (`LFSR_NOISE`, `midway_lfsr`), used by the shot and the player's explosion |
 | UFO | port 3 bit 0, while 1 | SN76477: VCO swept by its SLF (super-low-frequency oscillator), VCO mode 1, enabled while the bit is 1 |
 | Shot | port 3 bit 1 | Norton op-amp one-shot → integrator → op-amp VCO (falling pitch) mixed with filtered noise → triggered VCA |
 | Player dies | port 3 bit 2 | One-shot → triggered VCA on the noise → two RC low-pass filters |
@@ -697,9 +699,15 @@ From MAME's `mw8080bw_a.cpp` (invaders section, Midway board values):
 
 ### 14.3 Rules
 
-- **Edges come from the circuits.** The one-shots trigger on a bit's rising
-  edge, as the hardware does; holding a bit doesn't restart a sound. The UFO
-  plays while its bit is 1; extended play while bit 4 is 1.
+- **How long a sound plays comes from its circuit**, not from rules in our
+  code. The one-shots (shot, invader dies, player dies) start on a bit's
+  rising edge and end after their capacitor's time or when the bit falls,
+  whichever is first: their trigger is capacitor-coupled, so a falling bit
+  pulls it low. So the shot sounds while the game holds its bit, a held
+  "invader dies" lasts its 40 ms pulse plus the decay, and a held "player
+  dies" lasts about 0.85 s plus the decay. The UFO plays while its bit is 1,
+  extended play while bit 4 is 1, each fleet note while its bit is 1 (the
+  game holds them 4 frames).
 - **Amplifier enable** (port 3 bit 5): 0 mutes the output (the game turns it
   off in attract mode). The synth starts muted (port 3 = 0), so there is no
   power-on thump; MAME, which starts unmuted, plays one while its circuits
@@ -746,8 +754,35 @@ From MAME's `mw8080bw_a.cpp` (invaders section, Midway board values):
    in Lua, compared with our session by per-window features.
 4. **Real cabinets** (recordings, videos): for listening only. Components
    vary 5–20% between boards, and speakers and rooms colour the sound.
-5. **Our own renders:** hashes per sound, regenerated with `-update`, which
-   also writes WAVs to listen to (git-ignored).
+5. **Our own renders:** `go test ./internal/synth -run TestListen -listen`
+   writes them as WAVs to `testdata/listen/` (git-ignored), to compare by
+   ear with MAME's. No exact hashes: floating point may differ in its last
+   bits between arm64 and amd64 (FMA, assembly math), and the oscillators
+   amplify that.
+
+**Results (M3):** every sound matches MAME's recording: waveform
+correlation 0.9989–1.0000, all measurements within 0.7% (the fleet's
+brightness 1.7%). Over the whole golden session, in the 112 s where both
+make sound: envelope correlation 0.9998, waveform 0.9996, loudness 0.9998.
+`Render` takes 70 µs per frame with every sound playing (§16).
+
+**What we learned about MAME's timing** (measured, MAME 0.289):
+
+- The Lua frame callback for frame f runs at the start of that frame's
+  vertical blank, (f + 1) frame periods after power-on: MAME's screen starts
+  at line 224 at power-on, ours at line 0, so MAME's interrupts (and the
+  game's sound writes) come 38 lines later than ours relative to power-on.
+- MAME latches inputs once per frame, at the start of vertical blank: values
+  set in callback N take effect at line 224 of frame N + 1.
+  `Board.SetInputsAt(224, …)` reproduces it, and the game then runs exactly
+  as in MAME: work and video RAM match at every frame of the 24,000-frame
+  session.
+- MAME applies the amplifier mute (`system_mute`) to whole buffers of audio
+  as its sound thread processes them, about 0.8 s late here; ours mutes at
+  the sample, as the board does. The session check compares only windows
+  where both make sound.
+- MAME's discrete noise is a normal LFSR: its feedback helper masks both
+  operands (a first port that missed this produced lopsided noise).
 
 ## 15. Testing
 
@@ -808,10 +843,13 @@ exercisers in a separate step without it.
 
 ### 15.4 Sound tests
 
-See §14.5: block tests against the schematic's maths, circuit tests against
-committed measurements of MAME's output (local waveform comparison when the
-reference WAVs exist), hashes of our own renders, and a local comparison of
-the golden session with MAME's. `Render` must not allocate.
+See §14.5: block tests against the schematic's maths (`blocks_test.go`),
+`TestAgainstMAME` against the committed measurements of MAME's output (and
+the waveforms, locally, when the recordings exist), `TestSessionAgainstMAME`
+(local: the golden session against MAME's), the amplifier mute, determinism,
+and `Render` not allocating. `internal/app/sound` tests where each event
+lands in the frame and the stream's buffering; `TestROMSound` (local) plays
+the real game through the sound path.
 
 ### 15.5 Browser tests (Playwright)
 
@@ -838,9 +876,10 @@ natively (Apple M3, Go 1.27.4, M2):
 | `BenchmarkFrame` | 33 µs per frame | 0.2% of a 16.7 ms frame |
 | `BenchmarkScreen` | 31 µs | video RAM → rotated picture |
 | `BenchmarkPaint` | 50 µs | overlay colours on the CPU, until M5's shader |
+| `BenchmarkRender` (M3) | 70 µs per frame | all seven sounds playing (800 samples) |
 
-The whole per-frame path is about 0.12 ms natively; WASM is typically 2–5 ×
-slower, which still leaves the frame to drawing. The cost is in
+The whole per-frame path is about 0.19 ms natively with sound; WASM is
+typically 2–5 × slower, which still leaves the frame to drawing. The cost is in
 drawing: the CRT and overlay shaders at high pixel densities, as Chippie
 found. Benchmarks: `BenchmarkFrame` (one emulated frame), `BenchmarkEXM`
 (exerciser throughput), `BenchmarkVideo` (video RAM → pixels). PRs that touch

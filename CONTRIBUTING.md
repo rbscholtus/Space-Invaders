@@ -142,6 +142,16 @@ Go file is `assets/assets.go`, which embeds the data around it (DESIGN §5).
 - **Driving the real game:** measure how long the game takes before
   assuming (DESIGN §7.6); log its RAM state while writing a script, and
   make the test check that the script reaches what it means to cover.
+- **Sound references (DESIGN §14.5):** with MAME installed and your ROMs,
+  `scripts/mame-reference.sh` records each sequence in
+  `internal/synth/testdata/reference/sequences.txt` (and
+  `scripts/mame-reference.sh session` the golden session), then
+  `go run ./cmd/soundref` measures them into the committed `.json` files.
+  The WAVs stay local. A changed measurement must be explained in the PR.
+- **Comparing with MAME:** check its timing before trusting a comparison:
+  when its Lua callback runs, when inputs take effect, where its screen
+  starts (DESIGN §14.5). Measure, as the RAM checksums in M3 did, rather
+  than assume.
 - **`testing.AllocsPerRun`** panics in parallel tests: don't call
   `t.Parallel()` in those (`//nolint:paralleltest` with the reason).
 - **Browser tests** (`e2e/`, Playwright): allow for software rendering in CI.

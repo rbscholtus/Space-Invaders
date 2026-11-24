@@ -44,16 +44,18 @@ Milestones for the Go version. The design is in [DESIGN.md](DESIGN.md).
   (attract, a 1-player and a 2-player game to game over) with picture and
   sound hashes every half second. Only hashes in git (DESIGN §15.3).
 
-## M3: Sound
+## M3: Sound ✅
 
 - Reference tooling: MAME records each sound (Lua + `-wavwrite`, local);
   `cmd/soundref` commits measurements (DESIGN §14.5).
 - `internal/synth`: MAME's circuit building blocks, the six discrete
   circuits, the SN76477 for the UFO, the mixer and mute, ported to Go and
-  tested against the schematic's maths and MAME's output.
+  tested against the schematic's maths and MAME's output: waveform
+  correlation 0.9989–1.0000 per sound.
 - `internal/app/sound`: audio output at 48 kHz, events at the right sample,
-  volume and mute.
-- A local comparison of the golden session with MAME's.
+  volume (`-volume`, `-`/`=`) and mute (`M`).
+- The golden session against MAME's (local): with MAME's input timing the
+  game runs exactly as in MAME, and its sound matches (0.9996).
 
 ## M4: Browser and GitHub Pages
 

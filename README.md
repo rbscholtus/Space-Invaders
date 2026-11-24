@@ -6,8 +6,8 @@ to install**, and on the desktop. It will look like an upright arcade cabinet,
 with the coloured screen overlay and the moon backdrop, and on phones simply
 the screen.
 
-> **Status:** playable on the desktop, without sound yet. The browser
-> version, sound and the cabinet are next. The plan is in
+> **Status:** playable on the desktop, with sound. The browser version and
+> the cabinet are next. The plan is in
 > [docs/DESIGN.md](docs/DESIGN.md) and the milestones in
 > [docs/ROADMAP.md](docs/ROADMAP.md). The browser version will be published
 > on GitHub Pages.
@@ -22,7 +22,8 @@ go run ./cmd/invaders -roms path/to/invaders.zip
 ```
 
 `-roms` also takes a folder with the four files; by default it looks for
-`roms/invaders.zip`. `-lives 3`…`6` and `-bonus1000` set the DIP switches.
+`roms/invaders.zip`. `-lives 3`…`6` and `-bonus1000` set the DIP switches;
+`-volume 0`…`100` the sound (default 50).
 
 ## ROMs
 
@@ -42,6 +43,8 @@ the emulator will run a CPU self-test instead.
 | `←` `→` (or `A` `D`) | Move |
 | `Space` (or `↑`, `W`) | Fire |
 | `P` | Pause (also when the window isn't in front) |
+| `M` | Mute |
+| `-` / `=` | Volume down / up |
 
 On touch screens, the cabinet's buttons and coin slot will be the controls.
 
