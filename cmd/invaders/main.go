@@ -4,7 +4,7 @@
 //	go run ./cmd/invaders -roms roms/invaders.zip
 //
 // Keys: 5 or C coin, 1 and 2 start, ←/→ (or A/D) move, Space (or ↑/W)
-// fire, P pause.
+// fire, P pause, M mute, - and = volume.
 package main
 
 import (
@@ -31,10 +31,12 @@ const (
 // windowScale is the window's size in native pixels at start-up.
 const windowScale = 3
 
-// The lives DIP switch's range (DESIGN §7.2).
+// The lives DIP switch's range (DESIGN §7.2), and the volume's.
 const (
-	minLives = 3
-	maxLives = 6
+	minLives      = 3
+	maxLives      = 6
+	maxVolume     = 100
+	defaultVolume = 50
 )
 
 func main() {
@@ -43,12 +45,13 @@ func main() {
 
 // cli parses args, loads the ROMs and runs the board with run; it returns
 // the exit code. Usage and errors go to stderr.
-func cli(args []string, stderr io.Writer, run func(*invaders.Board) error) int {
+func cli(args []string, stderr io.Writer, run func(*invaders.Board, app.Options) error) int {
 	fs := flag.NewFlagSet("invaders", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	roms := fs.String("roms", "roms/invaders.zip", "your ROM set: a MAME `invaders.zip` or a folder with its files")
 	lives := fs.Int("lives", minLives, "DIP switch: lives per game, 3–6")
 	bonus1000 := fs.Bool("bonus1000", false, "DIP switch: bonus life at 1000 points instead of 1500")
+	volume := fs.Int("volume", defaultVolume, "sound volume, 0–100")
 	fs.Usage = func() {
 		fmt.Fprintln(stderr, "usage: invaders [flags]")
 		fs.PrintDefaults()
@@ -62,7 +65,7 @@ func cli(args []string, stderr io.Writer, run func(*invaders.Board) error) int {
 		return exitUsage
 	}
 
-	if fs.NArg() != 0 || *lives < minLives || *lives > maxLives {
+	if fs.NArg() != 0 || *lives < minLives || *lives > maxLives || *volume < 0 || *volume > maxVolume {
 		fs.Usage()
 
 		return exitUsage
@@ -82,7 +85,12 @@ func cli(args []string, stderr io.Writer, run func(*invaders.Board) error) int {
 		return exitFail
 	}
 
-	if err := run(board); err != nil {
+	opts := app.Options{
+		Volume:  float64(*volume) / maxVolume,
+		OnError: func(err error) { fmt.Fprintln(stderr, "invaders:", err) },
+	}
+
+	if err := run(board, opts); err != nil {
 		fmt.Fprintln(stderr, "invaders:", err)
 
 		return exitFail
@@ -121,12 +129,12 @@ func loadROMs(path string) ([]byte, error) {
 }
 
 // runWindow opens the window and runs the game until it's closed.
-func runWindow(board *invaders.Board) error {
+func runWindow(board *invaders.Board, opts app.Options) error {
 	ebiten.SetWindowTitle("Invaders: a Midway 8080 emulator")
 	ebiten.SetWindowSize(invaders.ScreenWidth*windowScale, invaders.ScreenHeight*windowScale)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 
-	if err := ebiten.RunGame(app.New(board)); err != nil {
+	if err := ebiten.RunGame(app.New(board, opts)); err != nil {
 		return fmt.Errorf("running the window: %w", err)
 	}
 
