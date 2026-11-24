@@ -7,6 +7,7 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"runtime"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -54,6 +55,9 @@ type Options struct {
 	ROMs   []byte
 	DIPs   invaders.DIPs
 	Volume float64 // 0–1
+	// VolumeGiven says the player chose the volume at start (-volume,
+	// ?volume=); otherwise the remembered one is used.
+	VolumeGiven bool
 	// DemoFast gives the CPU-test demo most of each frame, so it shows
 	// results sooner (?demo=fast, for the browser tests).
 	DemoFast bool
@@ -78,6 +82,7 @@ type Game struct {
 	settings Options
 
 	cache    *platform.Cache
+	prefs    *platform.Prefs
 	restored chan restored
 	incoming chan platform.Picked // dropped or picked files, read in goroutines
 	picking  bool                 // the file picker is open
@@ -114,6 +119,7 @@ func New(opts Options) *Game {
 		flow:     romscreen.New(platform.CanPickFiles()),
 		settings: opts,
 		cache:    platform.NewCache(),
+		prefs:    platform.NewPrefs(),
 		restored: make(chan restored, 1),
 		incoming: make(chan platform.Picked, 1),
 
@@ -128,6 +134,8 @@ func New(opts Options) *Game {
 		dirty:       true,
 		scale:       1,
 	}
+
+	applySaved(g.stream, g.prefs, opts.VolumeGiven)
 
 	if opts.ROMs != nil {
 		g.flow.Start()
@@ -238,10 +246,12 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 	return g.width, g.height
 }
 
-// startAudio starts the audio output once. Without an audio device the
-// game runs silently.
+// startAudio starts the audio output once: on the desktop at once, in the
+// browser on the first key press, click, touch or drop, as browsers allow
+// sound only after a user gesture (DESIGN §14.4). Without an audio device
+// the game runs silently.
 func (g *Game) startAudio() {
-	if g.audioTried {
+	if g.audioTried || (runtime.GOOS == "js" && !gesture()) {
 		return
 	}
 
@@ -250,6 +260,15 @@ func (g *Game) startAudio() {
 	if err := g.output.Start(g.stream); err != nil {
 		g.report(err)
 	}
+}
+
+// gesture reports whether the player just pressed a key, clicked, touched
+// or dropped something.
+func gesture() bool {
+	return len(inpututil.AppendJustPressedKeys(nil)) > 0 ||
+		inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) ||
+		len(inpututil.AppendJustPressedTouchIDs(nil)) > 0 ||
+		ebiten.DroppedFiles() != nil
 }
 
 // handleKeys handles the keys that aren't the cabinet's controls (DESIGN
@@ -261,14 +280,17 @@ func (g *Game) handleKeys() {
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyM) {
 		g.stream.SetMuted(!g.stream.Muted())
+		saveSound(g.stream, g.prefs)
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyMinus) {
 		g.stream.SetVolume(g.stream.Volume() - volumeStep)
+		saveSound(g.stream, g.prefs)
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyEqual) {
 		g.stream.SetVolume(g.stream.Volume() + volumeStep)
+		saveSound(g.stream, g.prefs)
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyO) && g.canOpenFiles() {

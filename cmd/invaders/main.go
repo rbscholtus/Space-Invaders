@@ -91,12 +91,17 @@ func cli(args []string, stderr io.Writer, run func(app.Options) error) int {
 		*volume = params.Volume
 	}
 
+	volumeGiven := params.Volume >= 0
+
+	fs.Visit(func(f *flag.Flag) { volumeGiven = volumeGiven || f.Name == "volume" })
+
 	opts := app.Options{
-		ROMs:     image,
-		DemoFast: params.Demo == platform.DemoFast,
-		DIPs:     invaders.DIPs{Lives: *lives, BonusAt1000: *bonus1000},
-		Volume:   float64(*volume) / maxVolume,
-		OnError:  func(err error) { fmt.Fprintln(stderr, "invaders:", err) },
+		ROMs:        image,
+		DemoFast:    params.Demo == platform.DemoFast,
+		VolumeGiven: volumeGiven,
+		DIPs:        invaders.DIPs{Lives: *lives, BonusAt1000: *bonus1000},
+		Volume:      float64(*volume) / maxVolume,
+		OnError:     func(err error) { fmt.Fprintln(stderr, "invaders:", err) },
 	}
 
 	if err := run(opts); err != nil {
