@@ -50,6 +50,9 @@ type Board struct {
 	// line is that much shorter.
 	overshoot int
 	frame     uint64
+
+	frameStart uint64       // CPU.Cycles when the frame began
+	events     []SoundEvent // this frame's sound-port changes
 }
 
 // New returns a board running rom, the 8 KB program image from
@@ -59,7 +62,7 @@ func New(rom []byte, dips DIPs) (*Board, error) {
 		return nil, fmt.Errorf("%w, not %d bytes", ErrROMSize, len(rom))
 	}
 
-	b := &Board{dips: dips}
+	b := &Board{dips: dips, events: make([]SoundEvent, 0, maxSoundEvents)}
 	copy(b.mem[:romSize], rom)
 	b.CPU = i8080.New(b)
 	b.Reset()
@@ -76,6 +79,8 @@ func (b *Board) Reset() {
 	b.out3, b.out5, b.watchdog = 0, 0, 0
 	b.intVector, b.overshoot, b.frame = 0, 0, 0
 	b.CPU.Reset()
+	b.frameStart = 0
+	b.events = b.events[:0]
 }
 
 // SetInputs sets the controls, as held during the next frames.
@@ -89,6 +94,9 @@ func (b *Board) Frame() uint64 { return b.frame }
 // overshoot of its last instruction into the next one, so emulated time
 // doesn't drift.
 func (b *Board) RunFrame() {
+	b.frameStart = b.CPU.Cycles
+	b.events = b.events[:0]
+
 	for line := range LinesPerFrame {
 		switch line {
 		case midScreenLine:

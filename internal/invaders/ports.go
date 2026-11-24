@@ -127,11 +127,11 @@ func (b *Board) Out(port, v byte) {
 	case portShiftCount:
 		b.shifter.count(v)
 	case portSound1:
-		b.out3 = v
+		b.recordSound(portSound1, &b.out3, v)
 	case portShiftData:
 		b.shifter.data(v)
 	case portSound2:
-		b.out5 = v
+		b.recordSound(portSound2, &b.out5, v)
 	case portWatchdog:
 		b.watchdog++
 	}
