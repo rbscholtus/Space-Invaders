@@ -5,50 +5,79 @@
 //
 //	go run ./cmd/trace -n 100 third_party/8080-exercisers/8080PRE.COM
 //
-// Running the Space Invaders ROM comes with the board (ROADMAP M2).
+// The exit code is 0 on success, 1 when the program fails and 2 for a usage
+// error. Running the Space Invaders ROM comes with the board (ROADMAP M2).
 package main
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/rbscholtus/Space-Invaders/internal/cpm"
 )
 
+// Exit codes.
+const (
+	exitOK    = 0
+	exitFail  = 1
+	exitUsage = 2
+)
+
 func main() {
-	n := flag.Uint64("n", 1000, "stop after this many instructions (0: no limit)")
-	flag.Usage = func() {
-		fmt.Fprintln(flag.CommandLine.Output(), "usage: trace [-n count] FILE.COM")
-		flag.PrintDefaults()
-	}
-
-	flag.Parse()
-
-	if flag.NArg() != 1 {
-		flag.Usage()
-		os.Exit(2)
-	}
-
-	if err := run(flag.Arg(0), *n); err != nil {
-		fmt.Fprintln(os.Stderr, "trace:", err)
-		os.Exit(1)
-	}
+	os.Exit(cli(os.Args[1:], os.Stdout, os.Stderr))
 }
 
-func run(path string, limit uint64) error {
+// cli runs the command with args (without the program name) and returns the
+// exit code. The trace goes to stdout; the program's output, usage and
+// errors go to stderr.
+func cli(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("trace", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	n := fs.Uint64("n", 1000, "stop after this many instructions (0: no limit)")
+	fs.Usage = func() {
+		fmt.Fprintln(stderr, "usage: trace [-n count] FILE.COM")
+		fs.PrintDefaults()
+	}
+
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return exitOK
+		}
+
+		return exitUsage
+	}
+
+	if fs.NArg() != 1 {
+		fs.Usage()
+
+		return exitUsage
+	}
+
+	if err := run(fs.Arg(0), *n, stdout, stderr); err != nil {
+		fmt.Fprintln(stderr, "trace:", err)
+
+		return exitFail
+	}
+
+	return exitOK
+}
+
+func run(path string, limit uint64, stdout, stderr io.Writer) error {
 	program, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("reading the program: %w", err)
 	}
 
-	m, err := cpm.New(program, os.Stderr)
+	m, err := cpm.New(program, stderr)
 	if err != nil {
 		return fmt.Errorf("loading %s: %w", path, err)
 	}
 
-	w := bufio.NewWriter(os.Stdout)
+	w := bufio.NewWriter(stdout)
 
 	for i := uint64(0); limit == 0 || i < limit; i++ {
 		state := m.CPU.Snapshot()
@@ -65,6 +94,7 @@ func run(path string, limit uint64) error {
 		return fmt.Errorf("writing the trace: %w", err)
 	}
 
+	// Run(0) runs nothing; it reports the error that stopped Step, if any.
 	if _, err := m.Run(0); err != nil {
 		return fmt.Errorf("running %s: %w", path, err)
 	}
