@@ -5,7 +5,6 @@ package app
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"github.com/rbscholtus/Space-Invaders/internal/app/input"
@@ -16,6 +15,9 @@ import (
 const (
 	screenW = invaders.ScreenWidth
 	screenH = invaders.ScreenHeight
+
+	// pausedDim is the brightness of the picture while paused.
+	pausedDim = 0.4
 )
 
 // Game implements ebiten.Game.
@@ -103,11 +105,16 @@ func (g *Game) Draw(dst *ebiten.Image) {
 	g.opts.GeoM.Scale(s, s)
 	g.opts.GeoM.Translate((float64(w)-screenW*s)/2, (float64(h)-screenH*s)/2)
 	g.opts.Filter = ebiten.FilterNearest
-	dst.DrawImage(g.picture, &g.opts)
+
+	// A paused game is shown dimmed. (ebitenutil's DebugPrint would pull
+	// net/http into the WASM build, CONTRIBUTING.)
+	g.opts.ColorScale.Reset()
 
 	if g.stopped {
-		ebitenutil.DebugPrintAt(dst, "PAUSED", int(8*g.scale), int(8*g.scale))
+		g.opts.ColorScale.Scale(pausedDim, pausedDim, pausedDim, 1)
 	}
+
+	dst.DrawImage(g.picture, &g.opts)
 }
 
 // Layout returns the window's size in real pixels (CONTRIBUTING, HiDPI).
