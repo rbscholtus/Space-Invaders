@@ -57,21 +57,23 @@ Milestones for the Go version. The design is in [DESIGN.md](DESIGN.md).
 - The golden session against MAME's (local): with MAME's input timing the
   game runs exactly as in MAME, and its sound matches (0.9996).
 
-## M4: Browser and GitHub Pages
+## M4: Browser and GitHub Pages ✅
 
 - `internal/platform` (from Chippie): IndexedDB, prefs, URL params, file
-  picker, `InFront`, `Fetch`, a state hook for the browser tests.
-- Our own 8×8 pixel font for on-screen text.
-- ROM screen: drop (browser and desktop), pick, remembered, forget, clear
-  errors; no external link (DESIGN §9.3). `-roms` becomes optional.
-- CPU-test demo (8080EXM) when no ROMs are loaded.
+  picker, `InFront`, `ReadExerciser`, a state hook for the browser tests.
+- Our own 8×8 pixel font for on-screen text (`internal/app/font`).
+- ROM screen (`internal/app/romscreen`): drop (browser and desktop), pick
+  (`O`), remembered, forget (`F`), clear errors; a zip inside a dropped
+  folder works; no external link (DESIGN §9.3). `-roms` is optional.
+- CPU-test demo (8080EXM) below the ROM screen when no ROMs are loaded
+  (`internal/app/demo`), with a time budget per frame.
 - Audio starts on the first gesture in the browser; volume and mute
   remembered.
 - Loader page, `scripts/build.sh`, `pages.yml`, Playwright tests (no ROMs
-  needed), a size budget in CI.
-- Ship the licence notices with the site (`LICENSE`, `LICENSE-MAME`;
-  DESIGN §19).
-- Measure the WASM size and record it in DESIGN §16.
+  needed in CI; a ROM test locally), a 4 MB size budget in CI.
+- The licence notices ship with the site (`LICENSE`, `LICENSE-MAME`,
+  `NOTICE.txt`; DESIGN §19).
+- WASM size measured: 3.4 MB gzip (DESIGN §16).
 - Keyboard only: touch controls come with the cabinet (M5).
 
 ## M5: The cabinet

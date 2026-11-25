@@ -457,8 +457,9 @@ CPU accepts it.
   buffer never drifts.
 - **Pausing:** when the tab is hidden (`platform.InFront`, as in Chippie), when
   a menu is open, or with a pause key. Natively, when the window loses focus.
-- **Speed is not adjustable** in normal play (the game's speed is its timing),
-  except a fast-forward key for the exerciser demo.
+- **Speed is not adjustable** in normal play (the game's speed is its timing).
+  Only the exerciser demo has a faster mode, `?demo=fast`, for the browser
+  tests (§9.4).
 
 ## 9. ROMs
 
@@ -484,21 +485,26 @@ be added later, each with its own table.
 The ROMs are copyrighted by Taito. They are never committed, hosted, or
 downloaded by the app.
 
-- **Browser:** drop a `.zip` or the four files on the page, or pick them with
-  the file picker (click, or `O`). `romset` reads the zip (`archive/zip`, in
+- **Browser:** drop a `.zip` or the four files on the page, or press `O` to
+  pick them with the file picker. `romset` reads the zip (`archive/zip`, in
   memory), matches files by CRC-32 (so renamed files still work), checks all
   four are present, and builds the 8 KB image. The image is stored in
   IndexedDB, so the next visit starts at once. `F` forgets it.
 - **Desktop:** the same drop, and a `-roms <path>` flag (zip or folder),
   now optional. The image is cached in the user cache folder.
-- **The flow:** at start, the cached image is loaded in a goroutine (never in
-  `Update`); while there is none, the ROM screen shows over the CPU-test
-  demo (§9.4); a good set starts the game and is cached. Dropped files come
-  from `ebiten.DroppedFiles()`, an `fs.FS` that `romset.Load` reads directly;
-  picked files go through `romset.Files`, an in-memory `fs.FS`.
-- **Errors** say exactly what's missing or wrong: "invaders.f is missing",
-  "invaders.zip has no Space Invaders ROMs (found: ...)", "CRC mismatch: this
-  looks like a bootleg set".
+- **The flow** (`internal/app/romscreen`, plain Go with tests): at start, the
+  cached image is loaded in a goroutine (never in `Update`) and re-checked
+  (`romset.CheckImage`); while there is none, the ROM screen shows, with the
+  CPU-test demo below it (§9.4); a good set starts the game and is cached.
+  Dropped files come from `ebiten.DroppedFiles()`, read in a goroutine (in
+  the browser a read can wait on JavaScript) with limits (64 files, 16 MB
+  each, 32 MB in all); picked files arrive as `platform.Picked`. Both go
+  through `romset.Files`, an in-memory `fs.FS`, and a zip among them is
+  opened one level deep, so a dropped folder holding `invaders.zip` works.
+- **Errors** say what's wrong, then `romset`'s detail: "These aren't the
+  invaders ROMs. Found: holiday.jpg", "Not all four ROMs are there. …"
+  (which file is missing), "These ROMs differ from the MAME invaders set. …"
+  (which CRC differs), wrapped to the monitor's 28 columns.
 
 ### 9.3 The external link
 
@@ -510,19 +516,26 @@ not be a direct download of ROM files.
 ### 9.4 Without ROMs: the CPU-test demo
 
 When no ROMs are loaded, the cabinet still does something: it runs the 8080
-exerciser `8080EXM` (GPL, §15.2) under the `cpm` harness, a fixed number of
-cycles per frame (as fast as the frame allows), and shows its output on the
-monitor in our pixel font (§10): each instruction group, then "OK" or
-"ERROR", fitted to the monitor's 28 columns. This shows the emulator works, gives the browser
+exerciser `8080EXM` (GPL, §15.2) under the `cpm` harness and shows its
+output on the monitor in our pixel font (§10), below the ROM screen's text:
+the header, then each instruction group with "OK" or "ERROR" (with "..."
+while it runs), fitted to the monitor's 28 columns (`internal/app/demo`).
+It gets a time budget per frame, 6 ms, and the app adjusts its cycle count
+to stay near it, so the frame stays smooth however fast the machine is.
+The whole run is 23.8 G cycles, most of it in the third group
+(`aluop <b,c,d,e,h,l,m,a>`, about 20 G cycles), so that group shows "..."
+for minutes. This shows the emulator works, gives the browser
 tests something to render without ROMs, and makes the "load your ROMs" message
 less of a dead end.
 
 The exerciser files are served next to the WASM in `exercisers/` (not
 compiled into it), with their licence and source, like Chippie's
-test-suite ROMs; the browser fetches `8080EXM.COM` with `platform.Fetch`.
-The desktop reads it from `third_party/8080-exercisers/` when run from the
-repository, and shows no demo otherwise. `?demo=fast` runs more cycles per
-frame, for the browser tests.
+test-suite ROMs; the browser fetches `8080EXM.COM` with
+`platform.ReadExerciser` (`fetch()`). The desktop reads it from
+`third_party/8080-exercisers/` when run from the repository, and shows no
+demo otherwise. `?demo=fast` raises the budget to 40 ms per frame, for the
+browser tests: the first "OK" then shows in about 8 s in headless
+Chromium. `F` (forget) restarts the demo.
 
 ## 10. Video
 
@@ -750,8 +763,11 @@ From MAME's `mw8080bw_a.cpp` (invaders section, Midway board values):
   rate (§8). A small buffer between the game loop and the audio player is
   kept at about 3 frames (50 ms): when it drifts, one sample is dropped or
   repeated. `Update` never blocks.
-- Volume and mute: `-volume`, keys (§13), later settings. In the browser,
-  the audio context starts on the first user gesture (M4).
+- Volume and mute: `-volume` or `?volume=`, and the keys (§13). Both are
+  remembered (`platform.Prefs`); a volume given at start wins over the
+  remembered one. In the browser, sound starts on the first key press,
+  click, touch or drop (browsers allow audio only after a user gesture); on
+  the desktop at once.
 
 ### 14.5 Testing against references
 
@@ -870,9 +886,21 @@ the real game through the sound path.
 
 ### 15.5 Browser tests (Playwright)
 
-As in Chippie: build, serve `web/dist/`, load the page in headless Chromium,
-check the loader goes away, and that the CPU-test demo prints its first "OK"
-line (no ROM needed). Allow for software rendering.
+`e2e/`, adapted from Chippie: `scripts/build.sh`, then Playwright serves
+`web/dist/` and loads the page in headless Chromium with software WebGL (CI
+has no GPU). The tests read the state the app publishes
+(`window.invadersState`: the mode, the ROM screen's message and the demo's
+lines; `platform.PublishState`) rather than comparing pixels, and poll it
+instead of waiting fixed times:
+
+- the loader goes away and the app asks for ROMs;
+- with `?demo=fast`, the demo shows its header, then
+  `dad <b,d,h,sp> … OK`;
+- picking a file that isn't the ROMs (`O`, the file chooser) shows the
+  explanation;
+- with your own ROMs (`roms/invaders.zip` or `INVADERS_ROMS`; local only,
+  skipped without them): picking them starts the game, a reload starts it
+  again from IndexedDB, and `F` forgets them.
 
 ## 16. Browser integration and performance
 
@@ -881,12 +909,13 @@ Chippie, each `_js.go` with an `_other.go` for the desktop: `Cache`
 (IndexedDB; the user cache folder), `Prefs` (`localStorage`; a JSON file:
 volume, mute, later the view and DIP switches), `Params` (URL query; flags),
 `PickFiles`, `InFront` (page visibility; iOS Safari can misreport focus),
-`Fetch` (`fetch()`, not `net/http`) and `PublishState` (the app's state as
-`window.invadersState`, for the browser tests). Nothing there blocks
+`ReadExerciser` (`fetch()`, not `net/http`; natively a file) and
+`PublishState` (the app's state as `window.invadersState`, for the browser
+tests). Nothing there blocks
 `Update` or `Draw`; async work runs in goroutines and reports on channels.
 
-**Audio in the browser** starts on the first key press, click or drop, as
-browsers require a user gesture (§14.4); on the desktop at start.
+**Audio in the browser** starts on the first key press, click, touch or
+drop, as browsers require a user gesture (§14.4); on the desktop at start.
 
 **Performance:** the 8080 at 2 MHz is about 0.5 million instructions per
 second; a plain Go interpreter does far more, even in WASM. Measured
@@ -909,8 +938,13 @@ found. Benchmarks: `BenchmarkFrame` (one emulated frame), `BenchmarkEXM`
 `i8080`, `invaders` or `crt` include `benchstat` output if they could affect
 speed.
 
-**Size:** expected a few MB gzip (Ebitengine + Go runtime; no UI toolkit, one
-font). Measure it in M1 and record it here.
+**Size** (M4, Go 1.27.4, Ebitengine 2.10.6, `-trimpath -ldflags="-s -w"`):
+`invaders-gz.wasm` is 3,429 KB (14,540 KB unpacked). Nearly all of it is
+the Go runtime and Ebitengine; there is no `net/http` (CI checks) and no font
+file. CI fails the build above 4 MB gzip and writes the size to the job
+summary. Served from `localhost`, the page downloads, unpacks and compiles
+it in well under a second; over the network the 3.4 MB download dominates.
+The loader shows its progress.
 
 ## 17. Build, CI and deployment
 
@@ -922,17 +956,20 @@ go run ./cmd/cputest third_party/8080-exercisers/8080PRE.COM
 go test ./...                                      # -short skips 8080EXM
 golangci-lint run && GOOS=js GOARCH=wasm golangci-lint run
 ./scripts/build.sh && (cd web/dist && python3 -m http.server 8080)
+./scripts/build.sh && (cd e2e && npm ci && npx playwright test)
 ```
 
 Every test command (ROM tests, the sound against MAME, listening,
 regenerating goldens and references) is listed in CONTRIBUTING, "Running
 tests".
 
-`scripts/build.sh`, as in Chippie: build `invaders.wasm` with
-`-trimpath -ldflags="-s -w"`, gzip it as `invaders-gz.wasm`, inline
-`wasm_exec.js` into the loader page, copy the exercisers (with licence and
-source), the cabinet art, and the licence notices (`LICENSE`,
-`internal/synth/LICENSE-MAME`, §19) into `web/dist/`.
+`scripts/build.sh`, as in Chippie, fills `web/dist/`: it builds
+`invaders.wasm` with `-trimpath -ldflags="-s -w"`, gzips it as
+`invaders-gz.wasm`, inlines `wasm_exec.js` into the loader page
+(`web/page.html` → `index.html`), and copies the exercisers (with licence,
+source and README, to `exercisers/`) and the licence notices (`LICENSE`,
+`LICENSE-MAME`, and a short `NOTICE.txt`, §19). The cabinet art joins them
+in M5.
 
 ### 17.2 GitHub Actions
 
@@ -940,7 +977,7 @@ Copied from Chippie and trimmed:
 
 | Workflow | Trigger | Does |
 |---|---|---|
-| `ci.yml` | push, PR | lint (native + WASM), unit + exerciser tests, WASM build, native build, Playwright smoke test |
+| `ci.yml` | push, PR | lint (native + WASM), unit + exerciser tests, native and WASM builds, no `net/http` in WASM, `scripts/build.sh` with the 4 MB size budget (§16); then a browser-test job runs Playwright on the built site (§15.5) |
 | `pages.yml` | push to `main` | build and deploy to GitHub Pages |
 | `vulncheck.yml` | push, PR, weekly | `govulncheck` for both builds |
 | `release.yml` | tag `v*` | desktop binaries (macOS, Windows, Linux) as release assets ⚠ decide; Ebitengine needs cgo on Linux and macOS, so build on each OS's runner |
@@ -989,12 +1026,17 @@ Our own code is BSD-3-Clause (`LICENSE`). What we use from others:
 | Colour overlay (`internal/app/overlay`) | MAME's `layout/invaders.lay` | CC0 | The strip positions and colours | Cited in the code |
 | Hardware facts (memory map, ports, timing, interrupts, DIP switches, ROM CRCs) | MAME's `mw8080bw` driver; the Intel 8080 manual | Facts, not code | Checked and cited per fact (§7–§10) | Cited in DESIGN and the code |
 | Reference recordings and measurements (`internal/synth/testdata/reference`) | Made locally with MAME from the player's own ROMs | Our measurements (numbers only) | Tests (§14.5); the recordings themselves are never committed | — |
-| Loader, platform layer, CI | Chippie (our own project) | BSD-3-Clause | Copied and adapted | — |
+| Loader, platform layer, CI, browser tests | Chippie (our own project) | BSD-3-Clause | Copied and adapted | — |
+| Browser tests (`e2e/`) | Playwright (Microsoft) | Apache-2.0 | A development tool, never shipped | — |
+
+**The pixel font** (`internal/app/font`) is our own drawing: nothing from
+the game's font or another font.
 
 **Binary releases** (the WASM site, desktop binaries) must carry the BSD-3
-notices too (clause 2): `scripts/build.sh` and `release.yml` copy
-`LICENSE` and `internal/synth/LICENSE-MAME` next to the program (M4), and an
-"About" screen lists them (M5).
+notices too (clause 2): `scripts/build.sh` puts `LICENSE`, `LICENSE-MAME`
+and a `NOTICE.txt` (what each covers, the exercisers' GPL, the trademark)
+in the site (M4); `release.yml` will do the same for desktop binaries, and
+an "About" screen lists them (M5).
 
 **The game itself** (its program, graphics and sound design, the name
 "Space Invaders") is Taito's. We ship none of it: players bring their own

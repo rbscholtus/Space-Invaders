@@ -3,8 +3,12 @@
 //
 //	go run ./cmd/invaders -roms roms/invaders.zip
 //
+// Without -roms it uses roms/invaders.zip if there, else the remembered set,
+// else it shows the ROM screen: drop the set on the window. The same
+// program runs in the browser (scripts/build.sh).
+//
 // Keys: 5 or C coin, 1 and 2 start, ←/→ (or A/D) move, Space (or ↑/W)
-// fire, P pause, M mute, - and = volume.
+// fire, P pause, M mute, - and = volume, F forget the remembered ROMs.
 package main
 
 import (

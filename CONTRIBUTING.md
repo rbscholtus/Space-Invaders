@@ -155,6 +155,11 @@ Go file is `assets/assets.go`, which embeds the data around it (DESIGN §5).
 - **`testing.AllocsPerRun`** panics in parallel tests: don't call
   `t.Parallel()` in those (`//nolint:paralleltest` with the reason).
 - **Browser tests** (`e2e/`, Playwright): allow for software rendering in CI.
+  Read the app's published state (`window.invadersState`) and poll it
+  (`expect.poll`) rather than comparing pixels or sleeping. Hold keys for
+  about 200 ms (`pressKey`): Ebitengine reads the keyboard once per frame.
+  A Mac that sleeps mid-run (on battery) stretches wall-clock times, so
+  don't measure speed from such a run.
 - **Coverage:** `internal/i8080/` aims for 95%+ line coverage. Coverage is
   reported in CI (`-coverpkg=./...`), not enforced.
 - **Before pushing:** `go test ./...` and `go test -race -short ./...`
@@ -182,6 +187,8 @@ flags (`-update`, `-listen`).
 | Benchmarks | `go test -run NONE -bench . ./internal/...` | — |
 | Coverage | `go test -coverpkg=./... -coverprofile=coverage.out ./... && go tool cover -func=coverage.out` | — |
 | Lint | `golangci-lint run && GOOS=js GOARCH=wasm golangci-lint run` | — |
+| Browser tests (once: `cd e2e && npm ci && npx playwright install chromium`) | `./scripts/build.sh && (cd e2e && npx playwright test)` | — (the ROM test: ROMs) |
+| The browser version by hand | `./scripts/build.sh && (cd web/dist && python3 -m http.server 8080)`, then <http://localhost:8080> (`?demo=fast`, `?volume=0`…`100`) | — |
 
 Regenerating goldens and references (check the result before committing,
 DESIGN §15):
