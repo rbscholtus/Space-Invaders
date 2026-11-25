@@ -522,9 +522,11 @@ the header, then each instruction group with "OK" or "ERROR" (with "..."
 while it runs), fitted to the monitor's 28 columns (`internal/app/demo`).
 It gets a time budget per frame, 6 ms, and the app adjusts its cycle count
 to stay near it, so the frame stays smooth however fast the machine is.
-The whole run is 23.8 G cycles, most of it in the third group
-(`aluop <b,c,d,e,h,l,m,a>`, about 20 G cycles), so that group shows "..."
-for minutes. This shows the emulator works, gives the browser
+The whole run is 23.8 G cycles, about 20 G of them in the third group
+(`aluop <b,c,d,e,h,l,m,a>`). Measured in headless Chromium on an Apple M3
+(M4): the first "OK" shows after 28 s, and the whole run, all 25 groups OK,
+takes 9.5 minutes, 8 of them on that third group. It ends with "Tests
+complete". This shows the emulator works, gives the browser
 tests something to render without ROMs, and makes the "load your ROMs" message
 less of a dead end.
 
@@ -534,8 +536,8 @@ test-suite ROMs; the browser fetches `8080EXM.COM` with
 `platform.ReadExerciser` (`fetch()`). The desktop reads it from
 `third_party/8080-exercisers/` when run from the repository, and shows no
 demo otherwise. `?demo=fast` raises the budget to 40 ms per frame, for the
-browser tests: the first "OK" then shows in about 8 s in headless
-Chromium. `F` (forget) restarts the demo.
+browser tests: the first "OK" then shows after 7 s, and the whole run takes
+2.2 minutes. `F` (forget) restarts the demo.
 
 ## 10. Video
 
@@ -931,7 +933,11 @@ natively (Apple M3, Go 1.27.4, M2):
 | `BenchmarkRender` (M3) | 70 µs per frame | all seven sounds playing (800 samples) |
 
 The whole per-frame path is about 0.19 ms natively with sound; WASM is
-typically 2–5 × slower, which still leaves the frame to drawing. The cost is in
+typically 2–5 × slower, which still leaves the frame to drawing. Measured
+in M4: with `?demo=fast`, the exerciser demo runs its 23.8 G cycles in
+134 s in headless Chromium on the same M3, at least 177 M cycles per second
+(about 90 × real time) while still drawing every frame: about 5 × slower
+than natively. The cost is in
 drawing: the CRT and overlay shaders at high pixel densities, as Chippie
 found. Benchmarks: `BenchmarkFrame` (one emulated frame), `BenchmarkEXM`
 (exerciser throughput), `BenchmarkVideo` (video RAM → pixels). PRs that touch
