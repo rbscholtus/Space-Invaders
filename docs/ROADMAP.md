@@ -78,6 +78,15 @@ Milestones for the Go version. The design is in [DESIGN.md](DESIGN.md).
 - WASM size measured: 3.4 MB gzip (DESIGN §16).
 - Keyboard only: touch controls come with the cabinet (M5).
 
+## After M4: the HI-SCORE remembered ✅
+
+- The HI-SCORE is kept between sessions (`platform.Prefs`), put back as
+  the board's power-on value so the game shows it from the start; `F`
+  forgets it with the ROMs (DESIGN §7.6).
+- A global leaderboard was considered: a server that trusts the client's
+  score can be faked by anyone, and one that replays the game to check it
+  would need a copy of the ROM. Not planned.
+
 ## M5: The cabinet
 
 - Original cabinet art and moon backdrop; `cabinet.json`.
@@ -89,8 +98,6 @@ Milestones for the Go version. The design is in [DESIGN.md](DESIGN.md).
 
 ## Ideas
 
-- Keep the high score between sessions (read it from work RAM ⚠ find the
-  address in the disassembly).
 - Desktop release binaries (`release.yml`).
 - Cocktail cabinet view, using the flip bit.
 - A flag (and setting) to choose the Midway or the Taito sound board. MAME
