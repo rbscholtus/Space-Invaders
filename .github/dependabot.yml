@@ -1,6 +1,6 @@
-# Dependabot: weekly update PRs for the Go modules and the GitHub Actions.
-# Security updates (repository settings) come on top, as soon as an advisory
-# appears. The npm entry for e2e/ is added with the browser tests (ROADMAP M4).
+# Dependabot: weekly update PRs for the Go modules, the browser tests' npm
+# packages and the GitHub Actions. Security updates (repository settings)
+# come on top, as soon as an advisory appears.
 version: 2
 updates:
   - package-ecosystem: gomod
@@ -16,6 +16,18 @@ updates:
         patterns: ["*"]
         # Ebitengine upgrades are their own PRs (CONTRIBUTING).
         exclude-patterns: ["github.com/hajimehoshi/ebiten/*"]
+
+  - package-ecosystem: npm
+    directory: /e2e
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      e2e:
+        patterns: ["*"]
 
   - package-ecosystem: github-actions
     directory: /
