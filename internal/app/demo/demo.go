@@ -50,6 +50,16 @@ func (d *Demo) Run(cycles uint64) {
 	}
 
 	d.takeLines()
+
+	// The exerciser's last line ("Tests complete") has no newline: once the
+	// program has ended, it's a finished line, not a group still running.
+	if d.machine.Done() {
+		if rest := strings.Trim(d.out.String(), "\r\n"); rest != "" {
+			d.lines = append(d.lines, Format(rest))
+		}
+
+		d.out.Reset()
+	}
 }
 
 // Done reports whether the program has finished (or failed).

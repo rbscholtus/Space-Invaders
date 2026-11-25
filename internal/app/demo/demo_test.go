@@ -2,6 +2,7 @@ package demo_test
 
 import (
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -74,6 +75,31 @@ func TestRunsTheExerciser(t *testing.T) {
 
 	if lit == 0 {
 		t.Error("Draw drew nothing")
+	}
+}
+
+// TestLastLineWithoutNewline: output left without a newline when the
+// program ends is a finished line, without "..." (8080EXM ends with
+// "Tests complete").
+func TestLastLineWithoutNewline(t *testing.T) {
+	t.Parallel()
+
+	program := slices.Concat([]byte{
+		0x0E, 0x09, // MVI C,9: print a $-terminated string
+		0x11, 0x0B, 0x01, // LXI D,0x010B: the string after this code
+		0xCD, 0x05, 0x00, // CALL 5
+		0xC3, 0x00, 0x00, // JMP 0: warm boot
+	}, []byte("Tests complete$"))
+
+	d, err := demo.New(program)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	d.Run(10_000)
+
+	if got := d.Lines(); !d.Done() || len(got) != 1 || got[0] != "Tests complete" {
+		t.Errorf("done %v, lines %q, want [\"Tests complete\"]", d.Done(), got)
 	}
 }
 
