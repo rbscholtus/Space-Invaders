@@ -122,7 +122,7 @@ func (f *Flow) Fail(err error) {
 // the caller).
 func (f *Flow) Forget() {
 	f.mode = NoROMs
-	f.message = "ROMs forgotten."
+	f.message = "ROMs and HI-SCORE forgotten."
 }
 
 // explain words romset's errors for the player.

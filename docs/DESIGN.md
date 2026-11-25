@@ -408,6 +408,28 @@ running it; addresses are work RAM.
 | `0x21FF` | Player 1's ships in reserve |
 | `0x20F8`, `0x20F9` | Player 1's score, BCD, low byte first |
 | `0x20FC`, `0x20FD` | Player 2's score |
+| `0x20F4`, `0x20F5` | HI-SCORE, BCD, low byte first |
+| `0x20F6`, `0x20F7` | Where the HI-SCORE is drawn (a video RAM address) |
+
+**The HI-SCORE** (disassembled, and checked by `TestROMHiScoreShown`):
+
+- **At power-on** the game copies 256 bytes of ROM, `0x1B00`–`0x1BFF`, to
+  RAM `0x2000`–`0x20FF` (`MVI B,00H; CALL 01E6H` at `0x18D7`), so the
+  HI-SCORE starts as the ROM's bytes at `0x1BF4`–`0x1BF5`: 0. Nothing else
+  reads those two bytes (the other copies from that block stop at
+  `0x1BBF` and `0x1BCF`).
+- **At game over** (`0x166D`–`0x1695`) the player's score replaces it if
+  higher, and it's redrawn. Nothing else changes it.
+- **Drawing:** each digit is character `0x1A` + digit, 8 bytes from
+  `0x1E00` + 8 × character, written `0x20` apart in video RAM; the next
+  digit starts `0x100` further on.
+
+**Remembered between sessions:** the real machine lost the HI-SCORE at
+power-off; the app keeps it in `platform.Prefs` (`hiscore`), saved when
+it goes up. `Board.SetHiScore` puts it back before the first frame, in RAM
+and in the power-on bytes, so the game draws it itself from the start and
+a reset keeps it, as if the board had a battery. `F` forgets it with the
+ROMs: a key of its own would be too easy to press by accident.
 
 **Timing, measured** (frames at 60 per second, from the start button):
 the amplifier turns on (port 3 bit 5) after about 200 frames (3.3 s), when
@@ -488,7 +510,8 @@ downloaded by the app.
   pick them with the file picker. `romset` reads the zip (`archive/zip`, in
   memory), matches files by CRC-32 (so renamed files still work), checks all
   four are present, and builds the 8 KB image. The image is stored in
-  IndexedDB, so the next visit starts at once. `F` forgets it.
+  IndexedDB, so the next visit starts at once. `F` forgets it (and the
+  HI-SCORE, §7.6).
 - **Desktop:** the same drop, and a `-roms <path>` flag (zip or folder),
   now optional. The image is cached in the user cache folder.
 - **The flow** (`internal/app/romscreen`, plain Go with tests): at start, the
@@ -641,7 +664,7 @@ starting point, adjusted for a rotated, vertical picture.
 | `M` | Mute |
 | `-` / `=` | Volume down / up (10% steps; `-volume 0–100` at start, default 50) |
 | `O` | Open the ROM files (browser file picker), on the ROM screen |
-| `F` | Forget the remembered ROMs and go back to the ROM screen |
+| `F` | Forget the remembered ROMs and HI-SCORE, and go back to the ROM screen |
 | `V` | Switch view |
 | `F1` | Stats overlay |
 
@@ -896,7 +919,8 @@ of waiting fixed times:
   explanation;
 - with your own ROMs (`roms/invaders.zip` or `INVADERS_ROMS`; local only,
   skipped without them): picking them starts the game, a reload starts it
-  again from IndexedDB, and `F` forgets them.
+  again from IndexedDB with a HI-SCORE put in localStorage, and `F` forgets
+  both.
 
 ## 16. Browser integration and performance
 

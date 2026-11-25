@@ -42,6 +42,9 @@ them. You'll need your own copy of the MAME `invaders` ROM set
 files are recognised by their contents). Without ROMs, the screen says how
 to load them and lists the controls.
 
+Your HI-SCORE is remembered too, in the browser and on the desktop, until
+you press `F`.
+
 ## Controls
 
 | Key | |
@@ -54,7 +57,7 @@ to load them and lists the controls.
 | `M` | Mute |
 | `-` / `=` | Volume down / up |
 | `O` | Open your ROM files (browser, on the ROM screen) |
-| `F` | Forget the remembered ROMs |
+| `F` | Forget the remembered ROMs and HI-SCORE |
 
 On touch screens, the cabinet's buttons and coin slot will be the controls.
 

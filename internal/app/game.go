@@ -68,6 +68,7 @@ type Game struct {
 	restored chan restored
 	incoming chan platform.Picked // dropped or picked files, read in goroutines
 	state    string               // the last state published for the browser tests
+	hiScore  int                  // the HI-SCORE last remembered
 
 	frames     *sound.Frames
 	stream     *sound.Stream
@@ -158,6 +159,7 @@ func (g *Game) Update() error {
 	} else {
 		g.board.SetInputs(g.controls.Update(keys()))
 		g.board.RunFrame()
+		g.hiScore = saveHiScore(g.board, g.prefs, g.hiScore)
 		g.stream.Push(g.frames.Render(g.board.SoundEvents()))
 		invaders.Screen(g.board.Video(), g.screen)
 	}
@@ -303,6 +305,7 @@ func (g *Game) startBoard(image []byte) {
 	}
 
 	g.board = board
+	g.hiScore = restoreHiScore(board, g.prefs)
 	g.controls = input.Controls{}
 	g.frames = sound.NewFrames()
 }
@@ -316,10 +319,12 @@ func (g *Game) remember(image []byte) {
 	}()
 }
 
-// forget stops the game, deletes the remembered image and shows the ROM
-// screen.
+// forget stops the game, deletes the remembered image and HI-SCORE, and
+// shows the ROM screen.
 func (g *Game) forget() {
 	g.board = nil
+	g.hiScore = 0
+	g.prefs.Set(prefHiScore, "")
 	g.frames = sound.NewFrames()
 	g.flow.Forget()
 
@@ -346,10 +351,16 @@ func (g *Game) report(err error) {
 // publishState puts the app's state on the page for the browser tests,
 // when it changes.
 func (g *Game) publishState() {
+	hiScore := 0
+	if g.board != nil {
+		hiScore = g.board.HiScore()
+	}
+
 	state, err := json.Marshal(struct {
 		Mode    string `json:"mode"`
 		Message string `json:"message"`
-	}{g.flow.Mode().String(), g.flow.Message()})
+		HiScore int    `json:"hiscore"`
+	}{g.flow.Mode().String(), g.flow.Message(), hiScore})
 	if err != nil || string(state) == g.state {
 		return
 	}
