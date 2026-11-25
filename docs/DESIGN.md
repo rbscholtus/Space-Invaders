@@ -669,10 +669,15 @@ at 1680×1920. Phones are still to be measured.
   own marquee text and our own moon backdrop. No screenshots or scans of real
   artwork.
 - **Pipeline:** as in Chippie: AI-generated masters (outside the repository,
-  `assets/source/`), a recipe, and a generator that writes pre-scaled `@1x`,
-  `@2x`, `@3x` files into `assets/cabinet/`. Layout positions (screen, buttons,
-  coin slot) come from a `cabinet.json`, not code. The prompts are in
-  [cabinet-artwork.md](cabinet-artwork.md).
+  `assets/source/`), a recipe (`assets/cabinet/recipe.json`), and a
+  generator, `cmd/cabinet-gen`, that puts the glass and marquee art into the
+  cabinet, draws our lettering, and writes pre-scaled `@1x`, `@2x`, `@3x`
+  files into `assets/cabinet/`: the cabinet, the pressed buttons, and
+  `backdrop.jpg` (the glass art behind the picture, §11.3). Layout positions
+  (screen, marquee, buttons, coin slots, lock) come from `cabinet.json`
+  (`internal/app/cabinet`), not code. The prompts are in
+  [cabinet-artwork.md](cabinet-artwork.md); `go run ./cmd/cabinet-gen
+  -preview <file>` shows the alignment.
 - **Every asset** has its origin and licence recorded in `assets/LICENSES.md`.
 - **Reference photos** of real cabinets are kept locally in `assets/reference/`
   (git-ignored), for inspiration only. They are never committed, and never
