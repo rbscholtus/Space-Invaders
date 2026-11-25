@@ -671,7 +671,8 @@ at 1680×1920. Phones are still to be measured.
 - **Pipeline:** as in Chippie: AI-generated masters (outside the repository,
   `assets/source/`), a recipe, and a generator that writes pre-scaled `@1x`,
   `@2x`, `@3x` files into `assets/cabinet/`. Layout positions (screen, buttons,
-  coin slot) come from a `cabinet.json`, not code.
+  coin slot) come from a `cabinet.json`, not code. The prompts are in
+  [cabinet-artwork.md](cabinet-artwork.md).
 - **Every asset** has its origin and licence recorded in `assets/LICENSES.md`.
 - **Reference photos** of real cabinets are kept locally in `assets/reference/`
   (git-ignored), for inspiration only. They are never committed, and never

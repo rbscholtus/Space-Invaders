@@ -95,7 +95,7 @@ In four PRs, each playable and deployed:
   moved from the CPU into the shader; `-shader clean` / `?shader=clean`
   (DESIGN §11.4).
 - **M5b, the cabinet:**
-  - original art in Midway's style (DESIGN §12), with "INVASION 1978" on the
+  - original art in Midway's style (DESIGN §12), with "1978 INVASION" on the
     marquee, made from generated masters by `cmd/cabinet-gen`;
   - the moon backdrop (additive, §11.3);
   - `cabinet.json`;

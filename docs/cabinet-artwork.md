@@ -14,7 +14,7 @@ aspect ratio set in the tool and things to avoid listed in the prompt.
   The prompts are in our own words; the result must not be derived from
   Taito's or Midway's art (DESIGN §12).
 - **No text in any image.** Generated letters come out garbled, and the
-  title must be ours. `cmd/cabinet-gen` draws all the text: "INVASION 1978"
+  title must be ours. `cmd/cabinet-gen` draws all the text: "1978 INVASION"
   on the marquee, LEFT, RIGHT, FIRE, 1 PLAYER and 2 PLAYERS on the control
   panel, and the price labels on the coin door.
 - **No creatures, aliens, spaceships or figures.** They would be the game's
@@ -89,7 +89,7 @@ read over it. A bright or busy middle is unusable, however good it looks.
 
 ## 3. The marquee
 
-The backlit strip above the glass. `cmd/cabinet-gen` letters "INVASION 1978"
+The backlit strip above the glass. `cmd/cabinet-gen` letters "1978 INVASION"
 over it, so it needs a calm area for the words. 21:9 (the widest the tool
 offers; the recipe crops it to the marquee's shape).
 
