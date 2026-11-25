@@ -21,6 +21,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/rbscholtus/Space-Invaders/internal/app"
+	"github.com/rbscholtus/Space-Invaders/internal/app/crt"
 	"github.com/rbscholtus/Space-Invaders/internal/invaders"
 	"github.com/rbscholtus/Space-Invaders/internal/platform"
 	"github.com/rbscholtus/Space-Invaders/internal/romset"
@@ -62,6 +63,7 @@ func cli(args []string, stderr io.Writer, run func(app.Options) error) int {
 	lives := fs.Int("lives", minLives, "DIP switch: lives per game, 3–6")
 	bonus1000 := fs.Bool("bonus1000", false, "DIP switch: bonus life at 1000 points instead of 1500")
 	volume := fs.Int("volume", defaultVolume, "sound volume, 0–100")
+	shader := fs.String("shader", "crt", "how the picture is drawn: crt (the monitor) or clean (pixel for pixel)")
 	fs.Usage = func() {
 		fmt.Fprintln(stderr, "usage: invaders [flags]")
 		fs.PrintDefaults()
@@ -75,7 +77,10 @@ func cli(args []string, stderr io.Writer, run func(app.Options) error) int {
 		return exitUsage
 	}
 
-	if fs.NArg() != 0 || *lives < minLives || *lives > maxLives || *volume < 0 || *volume > maxVolume {
+	mode, modeErr := crt.ParseMode(*shader)
+
+	if fs.NArg() != 0 || *lives < minLives || *lives > maxLives || *volume < 0 || *volume > maxVolume ||
+		modeErr != nil {
 		fs.Usage()
 
 		return exitUsage
@@ -88,14 +93,7 @@ func cli(args []string, stderr io.Writer, run func(app.Options) error) int {
 		return exitFail
 	}
 
-	// In the browser, the page's URL can set the volume
-	// (platform.URLParams); on the desktop it gives nothing.
-	params := platform.URLParams()
-	if params.Volume >= 0 {
-		*volume = params.Volume
-	}
-
-	volumeGiven := params.Volume >= 0
+	volumeGiven := fromURL(volume, &mode)
 
 	fs.Visit(func(f *flag.Flag) { volumeGiven = volumeGiven || f.Name == "volume" })
 
@@ -104,6 +102,7 @@ func cli(args []string, stderr io.Writer, run func(app.Options) error) int {
 		VolumeGiven: volumeGiven,
 		DIPs:        invaders.DIPs{Lives: *lives, BonusAt1000: *bonus1000},
 		Volume:      float64(*volume) / maxVolume,
+		Shader:      mode,
 		OnError:     func(err error) { fmt.Fprintln(stderr, "invaders:", err) },
 	}
 
@@ -114,6 +113,22 @@ func cli(args []string, stderr io.Writer, run func(app.Options) error) int {
 	}
 
 	return exitOK
+}
+
+// fromURL applies the page's URL parameters in the browser
+// (platform.URLParams; on the desktop there are none), and reports whether
+// it gave the volume.
+func fromURL(volume *int, mode *crt.Mode) bool {
+	params := platform.URLParams()
+	if params.Volume >= 0 {
+		*volume = params.Volume
+	}
+
+	if m, err := crt.ParseMode(params.Shader); err == nil {
+		*mode = m
+	}
+
+	return params.Volume >= 0
 }
 
 // initialROMs loads the -roms set (an error if it can't), or the default

@@ -1,0 +1,59 @@
+//kage:unit pixels
+
+package main
+
+// Src0: the phosphor buffer (the picture with its afterglow). Src1: the
+// colour overlay's tint, the same size (DESIGN §11.2). Coordinates are in
+// source pixels (srcPos - imageSrc0Origin()), never imageDstSize(), which
+// is the whole destination image; Src1 is read at Src0's positions.
+
+var Time float
+var Dim float     // 1 normally, less while paused
+var Scan float    // scanline strength, 0 when the lines would be too thin to show
+var Columns float // the monitor's lines across the picture: it's on its side
+var Bloom float   // the bloom's reach, in source pixels
+
+// warp bends the picture like the tube's curved face.
+func warp(uv vec2) vec2 {
+	c := uv*2 - 1
+	c *= 1 + 0.04*dot(c.yx, c.yx)
+	return c*0.5 + 0.5
+}
+
+func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
+	o := imageSrc0Origin()
+	s := imageSrc0Size()
+	uv := warp((srcPos - o) / s)
+	if uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1 {
+		return vec4(0, 0, 0, 1)
+	}
+
+	p := o + uv*s
+
+	// A cheap bloom: the centre and 8 neighbours.
+	c := imageSrc0At(p).rgb
+	b := vec3(0)
+	for i := 0; i < 8; i++ {
+		a := float(i) * 0.785398
+		b += imageSrc0At(p + vec2(cos(a), sin(a))*Bloom).rgb
+	}
+	c += b / 8 * 0.45
+
+	// The overlay's coloured strips sit on the tube's face, so they bend
+	// with the picture. (Positions in every source are Src0's: Ebitengine
+	// moves them to Src1 itself.)
+	c *= imageSrc1At(p).rgb
+
+	// The monitor is turned on its side: its lines run up and down.
+	f := fract(uv.x * Columns)
+	c *= 1 - Scan*0.3*(1-sin(f*3.14159))
+
+	// A slightly blue-white phosphor, the corners a little darker, and a
+	// faint flicker.
+	c *= vec3(0.93, 0.96, 1.0)
+	d := uv - 0.5
+	c *= 1 - dot(d, d)*1.1
+	c *= 0.99 + 0.01*sin(Time*60)
+
+	return vec4(c*Dim, 1)
+}

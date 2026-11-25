@@ -89,12 +89,22 @@ Milestones for the Go version. The design is in [DESIGN.md](DESIGN.md).
 
 ## M5: The cabinet
 
-- Original cabinet art and moon backdrop; `cabinet.json`.
-- Shaders: phosphor, overlay + backdrop (additive), CRT. The overlay moves
-  from `internal/app/overlay` (CPU) into the shader.
-- Cabinet and screen views, auto by size, `-view` / `?view=` / `V` / setting.
-- Clickable coin slot and buttons; touch controls in screen view; gamepads.
-- DIP switch settings in the app (M2 has `-lives` and `-bonus1000` flags).
+In four PRs, each playable and deployed:
+
+- **M5a, shaders ✅:** phosphor afterglow and the CRT, with the overlay
+  moved from the CPU into the shader; `-shader clean` / `?shader=clean`
+  (DESIGN §11.4).
+- **M5b, the cabinet:**
+  - original art in Midway's style (DESIGN §12), with "INVASION 1978" on the
+    marquee, made from generated masters by `cmd/cabinet-gen`;
+  - the moon backdrop (additive, §11.3);
+  - `cabinet.json`;
+  - cabinet and screen views, chosen by size, `-view` / `?view=` / `V`,
+    remembered.
+- **M5c, controls:** the clickable coin slot and buttons; touch controls in
+  the screen view; gamepads.
+- **M5d, settings:** behind the coin door (its lock, or `S`): lives, bonus,
+  view, volume, About. Also `?lives=` and `?bonus1000`, matching the flags.
 
 ## Ideas
 

@@ -6,4 +6,7 @@ package platform
 type Params struct {
 	// Volume is 0–100, or -1 when not given.
 	Volume int
+	// Shader is how the picture is drawn ("crt" or "clean"), "" when not
+	// given. The app checks the name.
+	Shader string
 }

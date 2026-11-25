@@ -32,7 +32,8 @@ go run ./cmd/invaders -roms path/to/invaders.zip
 uses `roms/invaders.zip` if it's there, or the set you loaded last time, or
 asks for one: drop it on the window. `-lives 3`…`6` and `-bonus1000` set
 the DIP switches; `-volume 0`…`100` the sound (default 50; volume and mute
-are remembered).
+are remembered). `-shader clean` draws the plain picture instead of the CRT
+monitor (`?shader=clean` in the browser).
 
 ## ROMs
 

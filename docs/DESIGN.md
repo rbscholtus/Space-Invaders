@@ -613,8 +613,10 @@ screen pixels:
 | Green (lives) | 16–133 | 240–255 | 0.125, 1, 0.125 |
 
 The strips are tints, not pure colours: they let a little of the other
-colours through. The Java version had the red strip at rows 32–63. Until
-the shaders (M5), `internal/app/overlay` paints the picture on the CPU.
+colours through. The Java version had the red strip at rows 32–63.
+`internal/app/overlay` holds the strips as data. Since M5 the CRT shader
+applies them, from a tint texture made from that data (`crt.Tint`). The
+CPU painter remains only for the clean mode (§11.4).
 
 The overlay is a small texture (or a list of rectangles) sampled by the
 shader, so a different overlay (e.g. the Taito version's) is data, not code.
@@ -630,10 +632,34 @@ plain blend. The backdrop is our own art (§12).
 
 ### 11.4 CRT
 
-A Kage CRT shader like Chippie's: phosphor persistence (Space Invaders'
-flickering sprites look wrong without some afterglow), slight bloom,
-scanlines and curvature. Reuse Chippie's `crt.kage` and `phosphor.kage` as a
-starting point, adjusted for a rotated, vertical picture.
+`internal/app/crt`, adapted from Chippie's renderer. Each emulated frame:
+
+1. **The picture** (`invaders.Screen`, 224×256) is written to a texture, white
+   where lit.
+2. **It is scaled up** with nearest-neighbour to the render size: the tube's
+   size, capped at 1,280 pixels high, so a full-screen tube on a dense
+   display doesn't cost too much. A bigger tube is scaled up from the cap.
+3. **`phosphor.kage`** keeps an afterglow: `max(picture, previous × 0.6)`
+   (`PhosphorDecay`, ⚠ tune by eye). It steps once per emulated frame, not
+   per display refresh, so the glow fades the same on a 120 Hz screen, and
+   it runs on for a few frames while paused.
+4. **`crt.kage`** draws the tube:
+   - the tube's curve and a small bloom;
+   - the overlay's tint (§11.2), applied after the bloom, because the
+     strips sit on the tube's face;
+   - the monitor's lines, running up and down, since the monitor is on its
+     side (224 lines across the picture). They show only where a line is
+     wider than 2 pixels; thinner lines would make a moiré;
+   - darker corners, a faint flicker, and a slightly blue-white phosphor.
+5. **The moon backdrop** is added in M5b, when its art exists (§11.3).
+
+`-shader clean` (`?shader=clean` in the browser) draws the plain coloured
+picture instead, pixel for pixel, with the CPU painter. If the shaders
+don't compile on a machine, the app reports it and uses the clean mode.
+The browser tests check which mode runs (`invadersState.shader`).
+
+**Measured** (M5a, Apple M3, Chrome with Metal): 60 fps in both modes, also
+at 1680×1920. Phones are still to be measured.
 
 ## 12. Cabinet artwork
 
@@ -981,7 +1007,7 @@ natively (Apple M3, Go 1.27.4, M2):
 | `BenchmarkEXM` | 864 MHz emulated | about 430 × real time |
 | `BenchmarkFrame` | 33 µs per frame | 0.2% of a 16.7 ms frame |
 | `BenchmarkScreen` | 31 µs | video RAM → rotated picture |
-| `BenchmarkPaint` | 50 µs | overlay colours on the CPU, until M5's shader |
+| `BenchmarkPaint` | 50 µs | overlay colours on the CPU: the clean mode only, since M5 (§11.4) |
 | `BenchmarkRender` (M3) | 70 µs per frame | all seven sounds playing (800 samples) |
 
 The whole per-frame path is about 0.19 ms natively with sound; WASM is

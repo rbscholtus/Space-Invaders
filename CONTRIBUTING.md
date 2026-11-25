@@ -79,7 +79,10 @@ Go file is `assets/assets.go`, which embeds the data around it (DESIGN §5).
   in place.
 - **Kage:** use `//kage:unit pixels`. Work in source coordinates
   (`srcPos - imageSrc0Origin()`), not `imageDstSize()`, which is the whole
-  destination image.
+  destination image. Read every source at Src0's positions:
+  `imageSrc1At(p)`, not `imageSrc1Origin() + …`. Ebitengine moves the
+  position to Src1 itself, so adding Src1's origin reads outside it. That
+  made the first CRT picture black.
 - **HiDPI:** `Layout` returns real pixels (outside size × device scale
   factor). Sizes and fonts are scaled by the same factor, never hard-coded in
   CSS pixels.

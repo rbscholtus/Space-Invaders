@@ -6,11 +6,13 @@ package app
 
 import (
 	"encoding/json"
+	"image"
 	"runtime"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
+	"github.com/rbscholtus/Space-Invaders/internal/app/crt"
 	"github.com/rbscholtus/Space-Invaders/internal/app/input"
 	"github.com/rbscholtus/Space-Invaders/internal/app/overlay"
 	"github.com/rbscholtus/Space-Invaders/internal/app/romscreen"
@@ -43,6 +45,9 @@ type Options struct {
 	// VolumeGiven says the player chose the volume at start (-volume,
 	// ?volume=); otherwise the remembered one is used.
 	VolumeGiven bool
+	// Shader is how the picture is drawn: the CRT monitor, or clean
+	// (-shader, ?shader=).
+	Shader crt.Mode
 	// OnError is told about problems that don't stop the game, such as
 	// no audio device (the game then runs silently).
 	OnError func(error)
@@ -60,7 +65,7 @@ type Game struct {
 	board    *invaders.Board // nil until there are ROMs
 	flow     *romscreen.Flow
 	controls input.Controls
-	painter  *overlay.Painter
+	monitor  *crt.Renderer
 	settings Options
 
 	cache    *platform.Cache
@@ -75,15 +80,12 @@ type Game struct {
 	output     sound.Output
 	audioTried bool
 
-	screen  []byte // the picture, 1 byte per pixel
-	rgba    []byte // the coloured picture
-	picture *ebiten.Image
-	dirty   bool // rgba changed since the last Draw
+	screen []byte // the picture, 1 byte per pixel
+	ticks  uint64 // Updates so far
 
 	paused  bool // by the player (P)
 	stopped bool // paused, for any reason, in the last Update
 
-	opts   ebiten.DrawImageOptions
 	scale  float64 // device scale factor
 	width  int     // Layout's size, in real pixels
 	height int
@@ -101,13 +103,11 @@ func New(opts Options) *Game {
 		incoming: make(chan platform.Picked, 1),
 		frames:   sound.NewFrames(),
 		stream:   sound.NewStream(opts.Volume),
-		painter:  overlay.NewPainter(overlay.Midway()),
 		screen:   make([]byte, screenW*screenH),
-		rgba:     make([]byte, screenW*screenH*4),
-		picture:  ebiten.NewImage(screenW, screenH),
-		dirty:    true,
 		scale:    1,
 	}
+
+	g.monitor = newMonitor(opts)
 
 	applySaved(g.stream, g.prefs, opts.VolumeGiven)
 
@@ -143,13 +143,20 @@ func keys() input.Keys {
 // ROM screen, unless paused: by the player, or because the app isn't in
 // front. While paused nothing is rendered, so the sound falls silent.
 func (g *Game) Update() error {
+	g.ticks++
+	g.monitor.Tick()
 	g.startAudio()
 	g.handleKeys()
 	g.handleROMs()
 	g.publishState()
 
 	g.stopped = g.paused || !platform.InFront(ebiten.IsFocused())
+
+	g.monitor.SetDim(1)
+
 	if g.stopped {
+		g.monitor.SetDim(pausedDim)
+
 		return nil
 	}
 
@@ -164,37 +171,45 @@ func (g *Game) Update() error {
 		invaders.Screen(g.board.Video(), g.screen)
 	}
 
-	g.painter.Paint(g.screen, g.rgba)
-	g.dirty = true
+	g.monitor.Update(g.screen)
 
 	return nil
 }
 
-// Draw scales the picture to fit the window, keeping its shape, with sharp
-// pixels.
+// Draw draws the monitor, as big as the window allows, keeping its shape.
 func (g *Game) Draw(dst *ebiten.Image) {
-	if g.dirty {
-		g.picture.WritePixels(g.rgba)
-		g.dirty = false
-	}
-
 	w, h := dst.Bounds().Dx(), dst.Bounds().Dy()
-	s := min(float64(w)/screenW, float64(h)/screenH)
+	g.monitor.SetScreen(fitTube(w, h))
+	g.monitor.Draw(dst, g.ticks)
+}
 
-	g.opts.GeoM.Reset()
-	g.opts.GeoM.Scale(s, s)
-	g.opts.GeoM.Translate((float64(w)-screenW*s)/2, (float64(h)-screenH*s)/2)
-	g.opts.Filter = ebiten.FilterNearest
-
-	// A paused game is shown dimmed. (ebitenutil's DebugPrint would pull
-	// net/http into the WASM build, CONTRIBUTING.)
-	g.opts.ColorScale.Reset()
-
-	if g.stopped {
-		g.opts.ColorScale.Scale(pausedDim, pausedDim, pausedDim, 1)
+// fitTube returns the biggest rectangle of the picture's shape that fits a
+// w×h window, centred.
+func fitTube(w, h int) image.Rectangle {
+	tw, th := w, w*screenH/screenW
+	if th > h {
+		tw, th = h*screenW/screenH, h
 	}
 
-	dst.DrawImage(g.picture, &g.opts)
+	x, y := (w-tw)/2, (h-th)/2
+
+	return image.Rect(x, y, x+tw, y+th)
+}
+
+// newMonitor makes the renderer in the chosen mode. If the CRT shaders
+// don't compile on this machine, it reports that and draws the clean
+// picture instead.
+func newMonitor(opts Options) *crt.Renderer {
+	m, err := crt.New(opts.Shader, overlay.Midway())
+	if err == nil {
+		return m
+	}
+
+	if opts.OnError != nil {
+		opts.OnError(err)
+	}
+
+	return crt.NewClean(overlay.Midway())
 }
 
 // Layout returns the window's size in real pixels (CONTRIBUTING, HiDPI).
@@ -360,7 +375,8 @@ func (g *Game) publishState() {
 		Mode    string `json:"mode"`
 		Message string `json:"message"`
 		HiScore int    `json:"hiscore"`
-	}{g.flow.Mode().String(), g.flow.Message(), hiScore})
+		Shader  string `json:"shader"`
+	}{g.flow.Mode().String(), g.flow.Message(), hiScore, g.monitor.Mode().String()})
 	if err != nil || string(state) == g.state {
 		return
 	}
