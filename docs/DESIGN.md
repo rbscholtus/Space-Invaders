@@ -647,6 +647,40 @@ starting point, adjusted for a rotated, vertical picture.
   `@2x`, `@3x` files into `assets/cabinet/`. Layout positions (screen, buttons,
   coin slot) come from a `cabinet.json`, not code.
 - **Every asset** has its origin and licence recorded in `assets/LICENSES.md`.
+- **Reference photos** of real cabinets are kept locally in `assets/reference/`
+  (git-ignored), for inspiration only. They are never committed, and never
+  given to an image generator as input: the result would be derived from
+  Taito's and Midway's art. Prompts describe the style in our own words.
+
+**Style notes** (from the reference photos, in our own words):
+
+- **Midway's upright, the board we emulate:**
+  - **Cabinet:** the lower cabinet is white. The side panels are deep blue,
+    with white horizontal stripes and dark, furry silhouette creatures
+    outlined in red and white.
+  - **The glass around the screen:** a deep-blue starfield, a yellow
+    cratered moon landscape along the bottom, and icy blue-white peaks at
+    the sides. It also has a 3D yellow and orange title, and a small points
+    card under the screen.
+  - **The control panel:** brushed silver, with three groups of buttons:
+    - two white buttons for left and right, under yellow-orange-red chevron
+      arrows;
+    - one fire button, under upward chevrons;
+    - white 1P and 2P start buttons, with red numerals.
+
+    It also has a short block of instructions. Buttons, not a joystick, which
+    matches our input (§13).
+  - **The coin door:** dark grey, with two coin slots under small red price
+    labels, and a speaker grille beside it.
+- **Taito's versions:** a navy cabinet with orange pinstriped edges, and a
+  blue "cockpit" control panel with a joystick and red buttons. The later
+  table cabinet is black, red and gold.
+- **What we take:**
+  - the palette;
+  - the mood: a moon landscape under a starfield;
+  - the layout of the control panel: silver, with chevrons.
+- **What we don't take:** the title, logos, the creature figures, or any part
+  of the art itself.
 
 ## 13. Input
 

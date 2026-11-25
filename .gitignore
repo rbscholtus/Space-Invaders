@@ -28,6 +28,8 @@ vendor/
 # ── Reference material: copyrighted, kept local only ─────────────
 docs/*.pdf
 docs/*.png
+# Photos of the real cabinets, for inspiration only: Taito/Midway's art (DESIGN §12).
+assets/reference/
 
 # ── Web build & browser tests ────────────────────────────────────
 web/dist/
