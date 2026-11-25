@@ -43,6 +43,7 @@ const (
 	columns     = 28
 	firstRow    = 1
 	maxMsgLines = 6
+	keyColumn   = 12 // where the controls' descriptions start
 )
 
 // Flow is the ROM flow. The zero value is not ready: use New.
@@ -177,17 +178,22 @@ func (f *Flow) Lines() []string {
 // Controls returns the keys a new player needs (DESIGN §13), shown at the
 // bottom of the ROM screen, at most 28 columns each. The keys fill rows
 // 23–29 exactly: the overlay's green band (the strip below it is only
-// partly green).
-func Controls() []string {
+// partly green). O is listed only where the file picker is offered.
+func (f *Flow) Controls() []string {
+	roms := fmt.Sprintf("%-*s%s", keyColumn, "F", "forget the ROMs")
+	if f.canPick {
+		roms = fmt.Sprintf("%-*s%s", keyColumn, "O / F", "open/forget ROMs")
+	}
+
 	return []string{
 		"          CONTROLS",
-		"5 or C       insert a coin",
-		"1 or 2       1 or 2 players",
-		"Left Right   move",
-		"Space        fire",
-		"P            pause",
-		"M, - and =   mute, volume",
-		"F            forget the ROMs",
+		fmt.Sprintf("%-*s%s", keyColumn, "5 or C", "insert a coin"),
+		fmt.Sprintf("%-*s%s", keyColumn, "1 or 2", "1 or 2 players"),
+		fmt.Sprintf("%-*s%s", keyColumn, "Left Right", "move"),
+		fmt.Sprintf("%-*s%s", keyColumn, "Space", "fire"),
+		fmt.Sprintf("%-*s%s", keyColumn, "P", "pause"),
+		fmt.Sprintf("%-*s%s", keyColumn, "M, - and =", "mute, volume"),
+		roms,
 	}
 }
 
@@ -202,7 +208,7 @@ func (f *Flow) Draw(dst []byte, width int) {
 		font.Draw(dst, width, 0, (firstRow+i)*font.CellHeight, line)
 	}
 
-	controls := Controls()
+	controls := f.Controls()
 	rows := len(dst) / width / font.CellHeight
 
 	for i, line := range controls {

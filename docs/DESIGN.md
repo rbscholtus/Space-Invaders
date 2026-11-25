@@ -515,8 +515,9 @@ not be a direct download of ROM files.
 ### 9.4 Without ROMs: the controls
 
 Below the ROM screen's text, at the bottom of the monitor, the screen lists
-the controls a new player needs (`romscreen.Controls`: coin, start, move,
-fire, pause, sound, forget), the keys in the overlay's green band. In the
+the controls a new player needs (`Flow.Controls`: coin, start, move,
+fire, pause, sound, and open (where the picker is offered) and forget the
+ROMs), the keys in the overlay's green band. In the
 browser there is nowhere else to show them until the cabinet (M5).
 
 **Decided (M4): no CPU-test demo.** M4 first ran the 8080 exerciser on the

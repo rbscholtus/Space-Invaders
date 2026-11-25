@@ -117,14 +117,25 @@ func TestWrongFiles(t *testing.T) {
 		t.Errorf("%d lines with a long message", n)
 	}
 
-	if last, controlsAt := 1+len(f.Lines())-1, 32-2-len(romscreen.Controls()); last >= controlsAt-1 {
+	if last, controlsAt := 1+len(f.Lines())-1, 32-2-len(f.Controls()); last >= controlsAt-1 {
 		t.Errorf("the text ends at row %d, the controls start at row %d", last, controlsAt)
 	}
 
-	for _, line := range romscreen.Controls() {
-		if len(line) > 28 {
-			t.Errorf("control %q is longer than 28 columns", line)
+	for _, canPick := range []bool{true, false} {
+		for _, line := range romscreen.New(canPick).Controls() {
+			if len(line) > 28 {
+				t.Errorf("control %q is longer than 28 columns", line)
+			}
 		}
+	}
+
+	// O is listed only where the picker is offered.
+	if last := f.Controls()[len(f.Controls())-1]; !strings.HasPrefix(last, "O / F") {
+		t.Errorf("with the picker, the last control is %q", last)
+	}
+
+	if last := romscreen.New(false).Controls()[7]; !strings.HasPrefix(last, "F ") {
+		t.Errorf("without the picker, the last control is %q", last)
 	}
 
 	pic := make([]byte, 224*256)
