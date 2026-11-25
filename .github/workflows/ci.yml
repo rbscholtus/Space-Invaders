@@ -66,6 +66,22 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+  test-wasm:
+    name: Test (wasm)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      # The CPU (with 8080EXM), board, sound and ROM tests, compiled to
+      # WebAssembly and run under Node: the code as the browser runs it.
+      - name: Test as WebAssembly
+        run: ./scripts/test-wasm.sh
+
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -81,7 +97,7 @@ jobs:
       - name: WebAssembly
         run: GOOS=js GOARCH=wasm go build ./...
       - name: Keep net/http out of the WebAssembly build
-        # It adds ~1.7 MB gzip; the browser uses fetch() (platform.ReadExerciser).
+        # It adds ~1.7 MB gzip, and the app downloads nothing: players bring their ROMs.
         run: |
           if GOOS=js GOARCH=wasm go list -deps ./... | grep -qx net/http; then
             echo "::error::net/http is linked into the WebAssembly build; use fetch() in internal/platform"

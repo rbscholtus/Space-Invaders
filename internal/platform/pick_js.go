@@ -3,7 +3,6 @@
 package platform
 
 import (
-	"context"
 	"fmt"
 	"syscall/js"
 )
@@ -64,7 +63,7 @@ func readPicked(list []js.Value) Picked {
 			return Picked{Err: fmt.Errorf("%s: %w", name, ErrTooLarge)}
 		}
 
-		buf, err := await(context.Background(), js.Global().Get("AbortController").New(), file.Call("arrayBuffer"))
+		buf, err := await(file.Call("arrayBuffer"))
 		if err != nil {
 			return Picked{Err: fmt.Errorf("reading %s: %w", name, err)}
 		}

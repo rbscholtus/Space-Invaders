@@ -2,11 +2,11 @@ import { Page, expect } from "@playwright/test";
 
 // The state the app publishes on the page (internal/app/game.go
 // publishState).
-export type AppState = { mode: "loading" | "roms" | "game"; message: string; demo: string[] | null };
+export type AppState = { mode: "loading" | "roms" | "game"; message: string };
 
 export async function appState(page: Page): Promise<AppState> {
   const json = await page.evaluate(() => (window as any).invadersState);
-  return json ? JSON.parse(json) : { mode: "loading", message: "", demo: null };
+  return json ? JSON.parse(json) : { mode: "loading", message: "" };
 }
 
 // Waits until the loader has started the app.

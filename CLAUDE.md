@@ -22,6 +22,7 @@ presented as an upright arcade cabinet. A port of the 2010 Java version in
   `.golangci.yml`. Never add a bare `//nolint`.
 - **Before finishing a change:** `golangci-lint run` (also with
   `GOOS=js GOARCH=wasm`), `go test ./...`, `go build ./cmd/invaders`, and
+  `./scripts/test-wasm.sh -short` for the core packages, and
   `./scripts/build.sh && (cd e2e && npx playwright test)` for anything the
   browser sees.
 - **The core packages (`internal/i8080`, `internal/invaders`, `internal/cpm`,

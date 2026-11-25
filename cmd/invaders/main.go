@@ -88,8 +88,8 @@ func cli(args []string, stderr io.Writer, run func(app.Options) error) int {
 		return exitFail
 	}
 
-	// In the browser, the page's URL can set the volume and the demo's
-	// speed (platform.URLParams); on the desktop it gives nothing.
+	// In the browser, the page's URL can set the volume
+	// (platform.URLParams); on the desktop it gives nothing.
 	params := platform.URLParams()
 	if params.Volume >= 0 {
 		*volume = params.Volume
@@ -101,7 +101,6 @@ func cli(args []string, stderr io.Writer, run func(app.Options) error) int {
 
 	opts := app.Options{
 		ROMs:        image,
-		DemoFast:    params.Demo == platform.DemoFast,
 		VolumeGiven: volumeGiven,
 		DIPs:        invaders.DIPs{Lives: *lives, BonusAt1000: *bonus1000},
 		Volume:      float64(*volume) / maxVolume,

@@ -4,7 +4,6 @@ package platform
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -120,7 +119,7 @@ func TestPrefs(t *testing.T) {
 func TestDesktopStubs(t *testing.T) {
 	t.Parallel()
 
-	if p := URLParams(); p.Volume != -1 || p.Demo != "" {
+	if p := URLParams(); p.Volume != -1 {
 		t.Errorf("URLParams = %+v, want none", p)
 	}
 
@@ -137,31 +136,4 @@ func TestDesktopStubs(t *testing.T) {
 	}
 
 	PublishState(`{}`) // does nothing
-}
-
-func TestReadExerciser(t *testing.T) {
-	t.Parallel()
-
-	data, err := readExerciser("../../third_party/8080-exercisers", "8080EXM.COM")
-	if err != nil || len(data) < 1000 {
-		t.Fatalf("8080EXM.COM: %d bytes, %v", len(data), err)
-	}
-
-	// Only a file name: no path escapes the folder.
-	if _, err := readExerciser("../../third_party/8080-exercisers", "../../go.mod"); err == nil {
-		t.Error("read outside the exercisers folder")
-	}
-
-	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "BIG.COM"), make([]byte, maxExerciserSize+1), 0o600); err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err := readExerciser(dir, "BIG.COM"); !errors.Is(err, ErrTooLarge) {
-		t.Errorf("too large: %v", err)
-	}
-
-	if _, err := ReadExerciser(context.Background(), "MISSING.COM"); err == nil {
-		t.Error("a missing exerciser should be an error")
-	}
 }

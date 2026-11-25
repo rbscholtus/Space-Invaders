@@ -1,26 +1,15 @@
 import { test, expect } from "@playwright/test";
 import { appState, pressKey, waitForApp } from "./app";
 
-// No ROMs in CI: these tests cover the loader, the ROM screen and the
-// CPU-test demo (DESIGN §15.5). Software rendering is slow, so they poll
-// the app's published state instead of waiting fixed times.
+// No ROMs in CI: these tests cover the loader and the ROM screen (DESIGN
+// §15.5). Software rendering is slow, so they poll the app's published
+// state instead of waiting fixed times.
 
 test("the app starts and asks for ROMs", async ({ page }) => {
   await page.goto("/");
   await waitForApp(page);
 
   await expect.poll(async () => (await appState(page)).mode, { intervals: [300] }).toBe("roms");
-});
-
-test("the CPU-test demo shows its first result", async ({ page }) => {
-  await page.goto("/?demo=fast");
-  await waitForApp(page);
-
-  // The header first, then "dad <b,d,h,sp> ... OK" after about 1.1 G cycles.
-  await expect.poll(async () => (await appState(page)).demo?.[0], { intervals: [500] }).toBe("8080 instruction exerciser");
-  await expect
-    .poll(async () => (await appState(page)).demo?.[1] ?? "", { intervals: [1000], timeout: 150_000 })
-    .toMatch(/^dad <b,d,h,sp>\s+OK$/);
 });
 
 test("files that aren't the ROMs are explained", async ({ page }) => {

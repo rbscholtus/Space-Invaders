@@ -108,15 +108,23 @@ func TestWrongFiles(t *testing.T) {
 		}
 	}
 
-	if f.Rows() != len(lines)+1 {
-		t.Errorf("Rows() = %d, want %d", f.Rows(), len(lines)+1)
-	}
-
-	// A long message is cut to six lines.
+	// A long message is cut to six lines, and the text still ends above
+	// the controls, with an empty row between (32 rows, from row 1; two
+	// empty rows below the controls).
 	f.Fail(errVeryLong)
 
 	if n := len(f.Lines()); n > 7+2+1+6 {
 		t.Errorf("%d lines with a long message", n)
+	}
+
+	if last, controlsAt := 1+len(f.Lines())-1, 32-2-len(romscreen.Controls()); last >= controlsAt-1 {
+		t.Errorf("the text ends at row %d, the controls start at row %d", last, controlsAt)
+	}
+
+	for _, line := range romscreen.Controls() {
+		if len(line) > 28 {
+			t.Errorf("control %q is longer than 28 columns", line)
+		}
 	}
 
 	pic := make([]byte, 224*256)
@@ -129,6 +137,23 @@ func TestWrongFiles(t *testing.T) {
 
 	if lit == 0 {
 		t.Error("Draw drew nothing")
+	}
+
+	// The controls are at the bottom, in rows 22–29 (the keys in the
+	// overlay's green band, 23–29), and the last two rows stay empty.
+	bottom := 0
+	for _, p := range pic[22*8*224 : 30*8*224] {
+		bottom += int(p)
+	}
+
+	if bottom == 0 {
+		t.Error("no controls at the bottom")
+	}
+
+	for _, p := range pic[30*8*224:] {
+		if p != 0 {
+			t.Fatal("the last two rows aren't empty")
+		}
 	}
 }
 

@@ -174,13 +174,38 @@ func (f *Flow) Lines() []string {
 	return lines
 }
 
-// Rows returns how many rows of text Draw uses, from the top.
-func (f *Flow) Rows() int { return firstRow + len(f.Lines()) }
+// Controls returns the keys a new player needs (DESIGN §13), shown at the
+// bottom of the ROM screen, at most 28 columns each. The keys fill rows
+// 23–29 exactly: the overlay's green band (the strip below it is only
+// partly green).
+func Controls() []string {
+	return []string{
+		"          CONTROLS",
+		"5 or C       insert a coin",
+		"1 or 2       1 or 2 players",
+		"Left Right   move",
+		"Space        fire",
+		"P            pause",
+		"M, - and =   mute, volume",
+		"F            forget the ROMs",
+	}
+}
 
-// Draw draws the ROM screen's text into the top of a picture, width pixels
-// wide, one byte per pixel.
+// controlsBottom is how many rows stay empty below the controls.
+const controlsBottom = 2
+
+// Draw draws the ROM screen into a picture width pixels wide, one byte per
+// pixel: the text from the top, the controls at the bottom, leaving the
+// last two rows empty.
 func (f *Flow) Draw(dst []byte, width int) {
 	for i, line := range f.Lines() {
 		font.Draw(dst, width, 0, (firstRow+i)*font.CellHeight, line)
+	}
+
+	controls := Controls()
+	rows := len(dst) / width / font.CellHeight
+
+	for i, line := range controls {
+		font.Draw(dst, width, 0, (rows-controlsBottom-len(controls)+i)*font.CellHeight, line)
 	}
 }

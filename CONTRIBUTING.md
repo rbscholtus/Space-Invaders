@@ -19,7 +19,8 @@ frozen: don't change it.
   dependencies, run `govulncheck ./...` and
   `GOOS=js GOARCH=wasm govulncheck ./...` locally.
 - **golangci-lint v2.** The config is in `.golangci.yml`.
-- **Node LTS** only for the Playwright browser tests in `e2e/`. No JavaScript
+- **Node LTS** only for the Playwright browser tests in `e2e/` and the
+  WebAssembly tests (`scripts/test-wasm.sh`). No JavaScript
   in the app, apart from the small loader page.
 
 ## Linting
@@ -187,8 +188,9 @@ flags (`-update`, `-listen`).
 | Benchmarks | `go test -run NONE -bench . ./internal/...` | — |
 | Coverage | `go test -coverpkg=./... -coverprofile=coverage.out ./... && go tool cover -func=coverage.out` | — |
 | Lint | `golangci-lint run && GOOS=js GOARCH=wasm golangci-lint run` | — |
+| The tests as WebAssembly, under Node (as CI) | `./scripts/test-wasm.sh` (add `-short` to skip 8080EXM, ~3 min) | Node |
 | Browser tests (once: `cd e2e && npm ci && npx playwright install chromium`) | `./scripts/build.sh && (cd e2e && npx playwright test)` | — (the ROM test: ROMs) |
-| The browser version by hand | `./scripts/build.sh && (cd web/dist && python3 -m http.server 8080)`, then <http://localhost:8080> (`?demo=fast`, `?volume=0`…`100`) | — |
+| The browser version by hand | `./scripts/build.sh && (cd web/dist && python3 -m http.server 8080)`, then <http://localhost:8080> (`?volume=0`…`100`) | — |
 
 Regenerating goldens and references (check the result before committing,
 DESIGN §15):

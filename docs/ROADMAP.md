@@ -60,13 +60,15 @@ Milestones for the Go version. The design is in [DESIGN.md](DESIGN.md).
 ## M4: Browser and GitHub Pages ✅
 
 - `internal/platform` (from Chippie): IndexedDB, prefs, URL params, file
-  picker, `InFront`, `ReadExerciser`, a state hook for the browser tests.
+  picker, `InFront`, a state hook for the browser tests.
 - Our own 8×8 pixel font for on-screen text (`internal/app/font`).
 - ROM screen (`internal/app/romscreen`): drop (browser and desktop), pick
   (`O`), remembered, forget (`F`), clear errors; a zip inside a dropped
   folder works; no external link (DESIGN §9.3). `-roms` is optional.
-- CPU-test demo (8080EXM) below the ROM screen when no ROMs are loaded
-  (`internal/app/demo`), with a time budget per frame.
+- The controls at the bottom of the ROM screen. A CPU-test demo there
+  (8080EXM) was built and then dropped: it didn't help players, and the
+  exercisers stay test-only (DESIGN §9.4). Instead the tests also run as
+  WebAssembly under Node, 8080EXM included (`scripts/test-wasm.sh`, CI).
 - Audio starts on the first gesture in the browser; volume and mute
   remembered.
 - Loader page, `scripts/build.sh`, `pages.yml`, Playwright tests (no ROMs

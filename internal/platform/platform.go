@@ -18,7 +18,6 @@ var (
 	ErrUnavailable = errors.New("platform: storage unavailable")
 	ErrUnsupported = errors.New("platform: not supported here")
 	ErrTooLarge    = errors.New("platform: too large")
-	ErrHTTPStatus  = errors.New("platform: download failed")
 )
 
 // appName names the app's storage: the IndexedDB database, the localStorage

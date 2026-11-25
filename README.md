@@ -39,9 +39,8 @@ are remembered).
 The game's ROMs are copyrighted, so this project doesn't include or download
 them. You'll need your own copy of the MAME `invaders` ROM set
 (`invaders.zip`, or the files `invaders.h`, `.g`, `.f` and `.e`; renamed
-files are recognised by their contents). Without ROMs, the emulator runs
-a CPU self-test on its screen: Frank D. Cringle's 8080 exerciser, one line
-per group of instructions.
+files are recognised by their contents). Without ROMs, the screen says how
+to load them and lists the controls.
 
 ## Controls
 

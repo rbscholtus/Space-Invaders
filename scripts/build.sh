@@ -2,9 +2,6 @@
 # Builds the browser version into web/dist/ (DESIGN §17.1):
 #   index.html            the loader page, with wasm_exec.js inlined
 #   invaders-gz.wasm      the app, gzip-compressed (the loader unpacks it)
-#   exercisers/           the 8080 exercisers for the CPU-test demo (GPL v2
-#                         or later), with their source, licence and README;
-#                         loaded at run time, never compiled in (DESIGN §9.4)
 #   LICENSE, LICENSE-MAME, NOTICE.txt
 #                         the licence notices binary releases must carry
 #                         (BSD-3 clause 2, DESIGN §19)
@@ -14,10 +11,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 out=web/dist
-exercisers=third_party/8080-exercisers
 
 rm -rf "$out"
-mkdir -p "$out/exercisers"
+mkdir -p "$out"
 
 GOOS=js GOARCH=wasm go build -trimpath -ldflags="-s -w" -o "$out/invaders.wasm" ./cmd/invaders
 gzip -9 -n -c "$out/invaders.wasm" > "$out/invaders-gz.wasm"
@@ -37,19 +33,15 @@ page = page.replace("/*__WASM_EXEC__*/", open(wasm_exec).read()).replace("__WASM
 open(dst, "w").write(page)
 PY
 
-cp "$exercisers"/*.COM "$exercisers"/*.MAC "$exercisers"/COPYING "$exercisers"/README.md "$out/exercisers/"
-
 cp LICENSE "$out/LICENSE"
 cp internal/synth/LICENSE-MAME "$out/LICENSE-MAME"
 cat > "$out/NOTICE.txt" <<'TXT'
 Space Invaders emulator: https://github.com/rbscholtus/Space-Invaders
 
 The emulator is BSD 3-Clause (LICENSE). Its sound emulation is ported from
-MAME and keeps MAME's BSD 3-Clause notice (LICENSE-MAME). The 8080
-exercisers in exercisers/ are GPL v2 or later (exercisers/COPYING), test
-programs the emulator loads, not part of it. No ROMs are included: Space
-Invaders is a trademark of Taito; this project is not affiliated with Taito
-or Midway.
+MAME and keeps MAME's BSD 3-Clause notice (LICENSE-MAME). No ROMs are
+included: Space Invaders is a trademark of Taito; this project is not
+affiliated with Taito or Midway.
 TXT
 
 echo "built $out: invaders-gz.wasm $((gz_size / 1024)) KB ($((raw_size / 1024)) KB unpacked)"

@@ -22,10 +22,6 @@ func URLParams() Params {
 		p.Volume = v
 	}
 
-	if q.Get("demo") == DemoFast {
-		p.Demo = DemoFast
-	}
-
 	return p
 }
 
