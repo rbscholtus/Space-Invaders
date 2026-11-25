@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { appState, pressKey, waitForApp } from "./app";
+import { appState, openFileChooser, waitForApp } from "./app";
 
 // No ROMs in CI: these tests cover the loader and the ROM screen (DESIGN
 // §15.5). Software rendering is slow, so they poll the app's published
@@ -18,9 +18,10 @@ test("files that aren't the ROMs are explained", async ({ page }) => {
   await expect.poll(async () => (await appState(page)).mode, { intervals: [300] }).toBe("roms");
 
   await page.mouse.click(10, 10); // focus the page
-  const chooser = page.waitForEvent("filechooser");
-  await pressKey(page, "o");
-  await (await chooser).setFiles({ name: "holiday.jpg", mimeType: "image/jpeg", buffer: Buffer.from("not a rom") });
+
+  // Choosing nothing changes nothing, and O still opens the chooser.
+  await (await openFileChooser(page)).setFiles([]);
+  await (await openFileChooser(page)).setFiles({ name: "holiday.jpg", mimeType: "image/jpeg", buffer: Buffer.from("not a rom") });
 
   await expect
     .poll(async () => (await appState(page)).message, { intervals: [300] })

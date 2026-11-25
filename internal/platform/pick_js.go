@@ -22,16 +22,32 @@ func PickFiles() <-chan Picked {
 	input.Get("style").Set("display", "none")
 	doc.Get("body").Call("appendChild", input)
 
-	var onChange js.Func
+	var onChange, onCancel js.Func
+
+	done := func() {
+		onChange.Release()
+		onCancel.Release()
+		input.Call("remove")
+	}
+
+	// Cancelling sends Picked{}, so the app knows the picker closed.
+	onCancel = js.FuncOf(func(js.Value, []js.Value) any {
+		defer done()
+
+		ch <- Picked{}
+
+		return nil
+	})
 
 	onChange = js.FuncOf(func(js.Value, []js.Value) any {
-		defer onChange.Release()
-		defer input.Call("remove")
+		defer done()
 
 		files := input.Get("files")
 		n := files.Get("length").Int()
 
 		if n == 0 {
+			ch <- Picked{}
+
 			return nil
 		}
 
@@ -48,6 +64,7 @@ func PickFiles() <-chan Picked {
 	})
 
 	input.Call("addEventListener", "change", onChange)
+	input.Call("addEventListener", "cancel", onCancel)
 	input.Call("click")
 
 	return ch

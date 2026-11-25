@@ -67,7 +67,6 @@ type Game struct {
 	prefs    *platform.Prefs
 	restored chan restored
 	incoming chan platform.Picked // dropped or picked files, read in goroutines
-	picking  bool                 // the file picker is open
 	state    string               // the last state published for the browser tests
 
 	frames     *sound.Frames
@@ -253,7 +252,6 @@ func (g *Game) handleKeys() {
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyO) && g.canOpenFiles() {
-		g.picking = true
 		picked := platform.PickFiles()
 
 		go func() { g.incoming <- <-picked }()
@@ -273,7 +271,9 @@ func (g *Game) handleROMs() {
 			g.startBoard(image)
 		}
 	case p := <-g.incoming:
-		g.picking = false
+		if p.Err == nil && len(p.Files) == 0 {
+			break // the player cancelled the picker
+		}
 
 		if p.Err != nil {
 			g.flow.Fail(p.Err)
@@ -330,9 +330,11 @@ func (g *Game) forget() {
 	}()
 }
 
-// canOpenFiles reports whether O opens the file picker now.
+// canOpenFiles reports whether O opens the file picker now. There's no
+// guard against opening it twice: the browser's picker is modal, and a
+// guard would get stuck in browsers that don't report a cancel.
 func (g *Game) canOpenFiles() bool {
-	return g.flow.Mode() == romscreen.NoROMs && platform.CanPickFiles() && !g.picking
+	return g.flow.Mode() == romscreen.NoROMs && platform.CanPickFiles()
 }
 
 func (g *Game) report(err error) {
