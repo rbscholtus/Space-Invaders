@@ -6,11 +6,18 @@ to install**, and on the desktop. It will look like an upright arcade cabinet,
 with the coloured screen overlay and the moon backdrop, and on phones simply
 the screen.
 
-> **Status:** playable on the desktop, with sound. The browser version and
-> the cabinet are next. The plan is in
+> **Status:** playable, with sound, in the browser and on the desktop. The
+> arcade cabinet and touch controls are next. The plan is in
 > [docs/DESIGN.md](docs/DESIGN.md) and the milestones in
-> [docs/ROADMAP.md](docs/ROADMAP.md). The browser version will be published
-> on GitHub Pages.
+> [docs/ROADMAP.md](docs/ROADMAP.md).
+
+## Playing it in the browser
+
+Open **<https://rbscholtus.github.io/Space-Invaders/>** in a current
+Chrome, Firefox, Edge or Safari, and drop your `invaders.zip` on the page
+(or press `O` to pick it). It's remembered for your next visit; `F` forgets
+it. Nothing is uploaded: the ROMs stay in your browser. For now it's played
+with the keyboard; touch controls come with the cabinet.
 
 ## Playing it on the desktop
 
@@ -21,18 +28,19 @@ Ebitengine also needs a few system packages (see its install guide).
 go run ./cmd/invaders -roms path/to/invaders.zip
 ```
 
-`-roms` also takes a folder with the four files; by default it looks for
-`roms/invaders.zip`. `-lives 3`…`6` and `-bonus1000` set the DIP switches;
-`-volume 0`…`100` the sound (default 50).
+`-roms` also takes a folder with the four files. Without it, the emulator
+uses `roms/invaders.zip` if it's there, or the set you loaded last time, or
+asks for one: drop it on the window. `-lives 3`…`6` and `-bonus1000` set
+the DIP switches; `-volume 0`…`100` the sound (default 50; volume and mute
+are remembered).
 
 ## ROMs
 
 The game's ROMs are copyrighted, so this project doesn't include or download
 them. You'll need your own copy of the MAME `invaders` ROM set
 (`invaders.zip`, or the files `invaders.h`, `.g`, `.f` and `.e`; renamed
-files are recognised by their contents). In the browser version, you'll
-drop it on the page and it's remembered for your next visit; without ROMs,
-the emulator will run a CPU self-test instead.
+files are recognised by their contents). Without ROMs, the screen says how
+to load them and lists the controls.
 
 ## Controls
 
@@ -45,6 +53,8 @@ the emulator will run a CPU self-test instead.
 | `P` | Pause (also when the window isn't in front) |
 | `M` | Mute |
 | `-` / `=` | Volume down / up |
+| `O` | Open your ROM files (browser, on the ROM screen) |
+| `F` | Forget the remembered ROMs |
 
 On touch screens, the cabinet's buttons and coin slot will be the controls.
 
@@ -52,6 +62,13 @@ On touch screens, the cabinet's buttons and coin slot will be the controls.
 
 The original emulator from 2010, written in Java, is in [`java/`](java/) and
 tagged `java-2010`. It's kept for reference and no longer maintained.
+
+## Building the browser version
+
+```sh
+./scripts/build.sh                          # builds web/dist/
+cd web/dist && python3 -m http.server 8080  # then open http://localhost:8080
+```
 
 ## Credits
 

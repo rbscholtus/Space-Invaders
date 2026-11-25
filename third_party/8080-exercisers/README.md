@@ -1,7 +1,8 @@
 # 8080 CPU exercisers
 
-The Intel 8080 test programs the emulator runs in CI and in the no-ROM demo
-(DESIGN §9.4, §15.2). They are CP/M `.COM` programs, run by `internal/cpm`.
+The Intel 8080 test programs the emulator's tests run, natively and as
+WebAssembly (DESIGN §15.2). They are CP/M `.COM` programs, run by
+`internal/cpm`. They are test data only: never part of the app or the site.
 
 | File | What it is |
 |---|---|

@@ -22,6 +22,7 @@ presented as an upright arcade cabinet. A port of the 2010 Java version in
   `.golangci.yml`. Never add a bare `//nolint`.
 - **Before finishing a change:** `golangci-lint run` (also with
   `GOOS=js GOARCH=wasm`), `go test ./...`, `go build ./cmd/invaders`, and
+  `./scripts/test-wasm.sh -short` for the core packages, and
   `./scripts/build.sh && (cd e2e && npx playwright test)` for anything the
   browser sees.
 - **The core packages (`internal/i8080`, `internal/invaders`, `internal/cpm`,
@@ -46,7 +47,9 @@ presented as an upright arcade cabinet. A port of the 2010 Java version in
   timing). In short: `go test ./pkg -update` (the
   package before the flag); no `ebitenutil`; check facts in the game code
   or by running it, not from memory; local reference PDFs in `docs/` are
-  git-ignored. Sound: `internal/synth` is a port of MAME's circuits, so
+  git-ignored. Browser: the e2e tests read `window.invadersState`
+  (`platform.PublishState`); keep it up to date when the app's modes
+  change. Sound: `internal/synth` is a port of MAME's circuits, so
   read the MAME source before changing a block, and keep
   `TestAgainstMAME` passing without loosening its tolerances.
 - **Name issues and PRs in full** when writing to the user, in commits and

@@ -9,8 +9,6 @@ permissions:
   contents: read
 
 # Ebitengine's native build on Linux needs these headers (cgo: GLFW, OpenGL, ALSA).
-# The browser build (scripts/build.sh, size budget) and the Playwright job
-# come in M4.
 env:
   EBITEN_DEPS: libasound2-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev
 
@@ -68,6 +66,22 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+  test-wasm:
+    name: Test (wasm)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      # The CPU (with 8080EXM), board, sound and ROM tests, compiled to
+      # WebAssembly and run under Node: the code as the browser runs it.
+      - name: Test as WebAssembly
+        run: ./scripts/test-wasm.sh
+
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -83,9 +97,54 @@ jobs:
       - name: WebAssembly
         run: GOOS=js GOARCH=wasm go build ./...
       - name: Keep net/http out of the WebAssembly build
-        # It adds ~1.7 MB gzip; the browser uses platform.Fetch (fetch()).
+        # It adds ~1.7 MB gzip, and the app downloads nothing: players bring their ROMs.
         run: |
           if GOOS=js GOARCH=wasm go list -deps ./... | grep -qx net/http; then
-            echo "::error::net/http is linked into the WebAssembly build; use platform.Fetch"
+            echo "::error::net/http is linked into the WebAssembly build; use fetch() in internal/platform"
             exit 1
           fi
+      - name: Browser build
+        run: ./scripts/build.sh
+      - name: Download size budget (DESIGN §16)
+        run: |
+          size=$(wc -c < web/dist/invaders-gz.wasm)
+          echo "invaders-gz.wasm: $((size / 1024)) KB" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$size" -gt $((4 * 1024 * 1024)) ]; then
+            echo "::error::invaders-gz.wasm is $((size / 1024)) KB, over the 4 MB budget"
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v7
+        with:
+          name: web-dist
+          path: web/dist
+          retention-days: 7
+
+  e2e:
+    name: Browser tests
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: web-dist
+          path: web/dist
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      - name: Install Playwright
+        working-directory: e2e
+        run: npm ci && npx playwright install --with-deps chromium
+      - name: Playwright
+        working-directory: e2e
+        run: npx playwright test
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            e2e/test-results
+            e2e/playwright-report
+          retention-days: 7

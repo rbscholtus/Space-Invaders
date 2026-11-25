@@ -57,16 +57,26 @@ Milestones for the Go version. The design is in [DESIGN.md](DESIGN.md).
 - The golden session against MAME's (local): with MAME's input timing the
   game runs exactly as in MAME, and its sound matches (0.9996).
 
-## M4: Browser and GitHub Pages
+## M4: Browser and GitHub Pages ✅
 
-- `internal/platform` (from Chippie): IndexedDB, file picker, drop, prefs,
-  URL params, `InFront`.
-- ROM screen: drop/pick, errors, forget; the optional external link.
-- CPU-test demo when no ROMs are loaded.
-- Loader page, `scripts/build.sh`, `pages.yml`, Playwright smoke test.
-- Ship the licence notices with the site (`LICENSE`, `LICENSE-MAME`;
-  DESIGN §19).
-- Measure the WASM size and record it in DESIGN §16.
+- `internal/platform` (from Chippie): IndexedDB, prefs, URL params, file
+  picker, `InFront`, a state hook for the browser tests.
+- Our own 8×8 pixel font for on-screen text (`internal/app/font`).
+- ROM screen (`internal/app/romscreen`): drop (browser and desktop), pick
+  (`O`), remembered, forget (`F`), clear errors; a zip inside a dropped
+  folder works; no external link (DESIGN §9.3). `-roms` is optional.
+- The controls at the bottom of the ROM screen. A CPU-test demo there
+  (8080EXM) was built and then dropped: it didn't help players, and the
+  exercisers stay test-only (DESIGN §9.4). Instead the tests also run as
+  WebAssembly under Node, 8080EXM included (`scripts/test-wasm.sh`, CI).
+- Audio starts on the first gesture in the browser; volume and mute
+  remembered.
+- Loader page, `scripts/build.sh`, `pages.yml`, Playwright tests (no ROMs
+  needed in CI; a ROM test locally), a 4 MB size budget in CI.
+- The licence notices ship with the site (`LICENSE`, `LICENSE-MAME`,
+  `NOTICE.txt`; DESIGN §19).
+- WASM size measured: 3.4 MB gzip (DESIGN §16).
+- Keyboard only: touch controls come with the cabinet (M5).
 
 ## M5: The cabinet
 

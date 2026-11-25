@@ -29,9 +29,16 @@ var (
 	ErrCRCMismatch = errors.New("CRC mismatch")
 )
 
-// maxFileSize bounds what is read from each file, so a large or hostile
-// archive can't exhaust memory. ROM chips are a few KB.
-const maxFileSize = 64 << 10
+// Size limits, so a large or hostile input can't exhaust memory: ROM chips
+// are a few KB, and a zip found among the files (a dropped or picked
+// invaders.zip) is opened only up to maxZipSize.
+const (
+	maxFileSize = 64 << 10
+	maxZipSize  = 16 << 20
+)
+
+// zipMagic starts every zip file (a local file header).
+const zipMagic = "PK\x03\x04"
 
 // File is one ROM chip of a set.
 type File struct {
@@ -136,9 +143,15 @@ func Load(set Set, fsys fs.FS) ([]byte, error) {
 	return image, nil
 }
 
-// scan reads every regular file in fsys up to maxFileSize. Larger files
-// can't be ROM chips and are skipped.
+// scan reads every regular file in fsys up to maxFileSize; larger files
+// can't be ROM chips and are only listed. A zip among the files is opened
+// and its entries scanned too (one level), so a dropped invaders.zip works
+// like the files inside it.
 func scan(fsys fs.FS) ([]candidate, error) {
+	return scanFS(fsys, "", true)
+}
+
+func scanFS(fsys fs.FS, prefix string, openZips bool) ([]candidate, error) {
 	var found []candidate
 
 	err := fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
@@ -155,18 +168,40 @@ func scan(fsys fs.FS) ([]candidate, error) {
 			return fmt.Errorf("%s: %w", path, err)
 		}
 
-		if info.Size() > maxFileSize {
-			found = append(found, candidate{path: path})
+		limit := int64(maxFileSize)
+		if openZips {
+			limit = maxZipSize
+		}
+
+		if info.Size() > limit {
+			found = append(found, candidate{path: prefix + path})
 
 			return nil
 		}
 
-		data, err := readFile(fsys, path)
+		data, err := readFile(fsys, path, limit)
 		if err != nil {
 			return err
 		}
 
-		found = append(found, candidate{path: path, data: data, crc: crc32.ChecksumIEEE(data)})
+		if openZips && strings.HasPrefix(string(data[:min(len(data), len(zipMagic))]), zipMagic) {
+			inner, err := scanZip(data, prefix+path+"/")
+			if err != nil {
+				return err
+			}
+
+			found = append(found, inner...)
+
+			return nil
+		}
+
+		if len(data) > maxFileSize {
+			found = append(found, candidate{path: prefix + path})
+
+			return nil
+		}
+
+		found = append(found, candidate{path: prefix + path, data: data, crc: crc32.ChecksumIEEE(data)})
 
 		return nil
 	})
@@ -177,15 +212,25 @@ func scan(fsys fs.FS) ([]candidate, error) {
 	return found, nil
 }
 
-// readFile reads at most maxFileSize bytes, whatever size the entry claims.
-func readFile(fsys fs.FS, path string) ([]byte, error) {
+// scanZip scans the entries of a zip found among the files.
+func scanZip(data []byte, prefix string) ([]candidate, error) {
+	zr, err := zip.NewReader(bytes.NewReader(data), int64(len(data)))
+	if err != nil {
+		return nil, fmt.Errorf("reading %s: %w", strings.TrimSuffix(prefix, "/"), err)
+	}
+
+	return scanFS(zr, prefix, false)
+}
+
+// readFile reads at most limit bytes, whatever size the entry claims.
+func readFile(fsys fs.FS, path string, limit int64) ([]byte, error) {
 	f, err := fsys.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("opening %s: %w", path, err)
 	}
 	defer f.Close()
 
-	data, err := io.ReadAll(io.LimitReader(f, maxFileSize))
+	data, err := io.ReadAll(io.LimitReader(f, limit))
 	if err != nil {
 		return nil, fmt.Errorf("reading %s: %w", path, err)
 	}
@@ -231,4 +276,27 @@ func names(found []candidate) string {
 	slices.Sort(list)
 
 	return strings.Join(list, ", ")
+}
+
+// ErrBadImage is returned by CheckImage for an image that isn't the set.
+var ErrBadImage = errors.New("not this ROM set's image")
+
+// CheckImage checks an assembled image (for example one remembered from an
+// earlier visit) against the set: its size, and each chip's CRC-32 and
+// SHA-1.
+func CheckImage(set Set, image []byte) error {
+	if len(image) != set.ImageSize {
+		return fmt.Errorf("%w: %d bytes, want %d", ErrBadImage, len(image), set.ImageSize)
+	}
+
+	for _, f := range set.Files {
+		chip := image[f.Addr : int(f.Addr)+f.Size]
+		sum := sha1.Sum(chip) //nolint:gosec // G401: identifies the dump, see the import
+
+		if crc32.ChecksumIEEE(chip) != f.CRC || hex.EncodeToString(sum[:]) != f.SHA1 {
+			return fmt.Errorf("%w: %s differs", ErrBadImage, f.Name)
+		}
+	}
+
+	return nil
 }

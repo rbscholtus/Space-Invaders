@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Space Invaders emulator</title>
+<meta name="description" content="An emulator of the 1978 Midway 8080 arcade board, in Go and WebAssembly. Bring your own ROMs.">
+<style>
+  /* The game owns the whole page; the loader is a centred card that is
+     removed once Go runs, so it can't swallow the game's clicks or drops.
+     Adapted from Chippie's loader (scripts/build.sh fills in the markers). */
+  :root {
+    --night: #050807;
+    --ink: #d8f5dc;
+    --muted: #7fa287;
+    --phosphor: #4bff6a;
+    --track: #14201a;
+    --error: #ff6b5e;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color-scheme: dark;
+  }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--night); color: var(--ink); font-family: var(--mono); overflow: hidden; }
+  #loader {
+    position: fixed; inset: 0; display: grid; place-items: center;
+    padding: 24px max(16px, env(safe-area-inset-right, 0px)) 24px max(16px, env(safe-area-inset-left, 0px));
+  }
+  #loader[hidden] { display: none; }
+  .card { width: min(30rem, 100%); display: grid; gap: 0.9rem; }
+  h1 { margin: 0; font-weight: 700; font-size: 1.9rem; line-height: 1.1; letter-spacing: 0.08em; color: var(--phosphor); }
+  p { margin: 0; line-height: 1.5; color: var(--muted); }
+  .bar { height: 8px; background: var(--track); overflow: hidden; }
+  .bar span { display: block; height: 100%; width: 0; background: var(--phosphor); transition: width 0.15s linear; }
+  #status { font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+  #status.error { color: var(--error); }
+  @media (prefers-reduced-motion: reduce) { .bar span { transition: none; } }
+</style>
+</head>
+<body>
+<div id="loader">
+  <div class="card">
+    <h1>SPACE INVADERS EMULATOR</h1>
+    <p>The 1978 Midway 8080 arcade board, emulated in Go and WebAssembly. Bring your own ROMs: the MAME <em>invaders</em> set.</p>
+    <div class="bar" aria-hidden="true"><span id="bar"></span></div>
+    <div id="status" role="status">Warming up the monitor…</div>
+  </div>
+</div>
+
+<script>
+/*__WASM_EXEC__*/
+</script>
+<script>
+(async () => {
+  const bar = document.getElementById("bar");
+  const status = document.getElementById("status");
+  const fail = (msg) => { status.textContent = msg; status.classList.add("error"); };
+  try {
+    if (!("DecompressionStream" in window)) {
+      fail("This browser can't unpack the app (no DecompressionStream). Try a current Chrome, Firefox or Safari.");
+      return;
+    }
+    const t0 = performance.now();
+    const res = await fetch("invaders-gz.wasm");
+    if (!res.ok) { fail("Couldn't download the app (HTTP " + res.status + ")."); return; }
+    // The build writes the gzip size here; a host that decodes the file
+    // itself sends more bytes than this, so the bar is capped at 100%.
+    const total = Number(res.headers.get("content-length")) || Number("__WASM_GZ_SIZE__");
+    let got = 0;
+    const counted = res.body.pipeThrough(new TransformStream({
+      transform(chunk, ctl) {
+        got += chunk.byteLength;
+        bar.style.width = Math.min(100, (got / total) * 100).toFixed(1) + "%";
+        status.textContent = "Downloading " + (got / 1048576).toFixed(1) + " of " + (total / 1048576).toFixed(1) + " MB";
+        ctl.enqueue(chunk);
+      }
+    }));
+    // Unpack only if the bytes are still gzip; a host may already have decoded them.
+    let raw = await new Response(counted).arrayBuffer();
+    const head = new Uint8Array(raw, 0, 2);
+    if (head[0] === 0x1f && head[1] === 0x8b) {
+      status.textContent = "Unpacking…";
+      raw = await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();
+    }
+    const t1 = performance.now();
+    status.textContent = "Compiling " + (raw.byteLength / 1048576).toFixed(1) + " MB of WebAssembly…";
+    const go = new Go();
+    const { instance } = await WebAssembly.instantiate(raw, go.importObject);
+    const t2 = performance.now();
+    console.log(`[invaders] download+unpack ${(t1 - t0).toFixed(0)} ms, compile ${(t2 - t1).toFixed(0)} ms`);
+    window.invadersTimings = { download: t1 - t0, compile: t2 - t1 };
+    document.getElementById("loader").hidden = true;
+    go.run(instance);
+  } catch (e) {
+    fail("The app failed to start: " + (e && e.message ? e.message : e));
+  }
+})();
+</script>
+</body>
+</html>

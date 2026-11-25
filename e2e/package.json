@@ -1,0 +1,12 @@
+{
+  "name": "space-invaders-e2e",
+  "private": true,
+  "description": "Browser tests for the Space Invaders emulator (DESIGN §15.5). Build first: ../scripts/build.sh",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.1"
+  }
+}
