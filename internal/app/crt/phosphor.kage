@@ -1,0 +1,15 @@
+//kage:unit pixels
+
+package main
+
+// Src0: the new picture, scaled up to the render size. Src1: the previous
+// phosphor buffer. The result is the new buffer: lit pixels fade out
+// instead of vanishing (DESIGN §11.4).
+
+var Decay float
+
+func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
+	cur := imageSrc0UnsafeAt(srcPos)
+	prev := imageSrc1UnsafeAt(srcPos)
+	return max(cur, prev*Decay)
+}

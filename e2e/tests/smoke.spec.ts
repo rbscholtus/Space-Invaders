@@ -5,11 +5,20 @@ import { appState, openFileChooser, waitForApp } from "./app";
 // §15.5). Software rendering is slow, so they poll the app's published
 // state instead of waiting fixed times.
 
-test("the app starts and asks for ROMs", async ({ page }) => {
+test("the app starts and asks for ROMs, on the CRT monitor", async ({ page }) => {
   await page.goto("/");
   await waitForApp(page);
 
   await expect.poll(async () => (await appState(page)).mode, { intervals: [300] }).toBe("roms");
+  // The shaders compiled: the app falls back to clean only if they don't.
+  expect((await appState(page)).shader).toBe("crt");
+});
+
+test("?shader=clean draws the plain picture", async ({ page }) => {
+  await page.goto("/?shader=clean");
+  await waitForApp(page);
+
+  await expect.poll(async () => (await appState(page)).shader, { intervals: [300] }).toBe("clean");
 });
 
 test("files that aren't the ROMs are explained", async ({ page }) => {

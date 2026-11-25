@@ -22,6 +22,8 @@ func URLParams() Params {
 		p.Volume = v
 	}
 
+	p.Shader = q.Get("shader")
+
 	return p
 }
 
