@@ -32,30 +32,38 @@ picture is only about a quarter of the cabinet's height.
 ```
 front-facing straight-on product photograph of a late-1970s upright arcade
 cabinet standing on the floor, seen from the eye height of a standing
-player so the top of the sloping control panel is clearly visible,
-symmetrical, the whole cabinet in frame from the top of the marquee to the
+player so the top of the control panel is clearly visible, the cabinet
+centred, the whole cabinet in frame from the top of the marquee to the
 floor. The upper front holds a large rectangular glass panel that is
 completely black, with no reflection; above it a wide rectangular backlit
 marquee panel that is completely black and blank. The cabinet sides are
 deep royal blue with thin white horizontal pinstripes, seen as narrow edges
-beside the front; the lower front of the cabinet is glossy white. A
-brushed-silver control panel juts out below the glass, with five round white
-plastic push buttons: one on the left and one on the right, each under a
-painted row of yellow-orange-red chevron arrows pointing outwards, one large
-button in the middle under upward chevrons, and two small buttons in the
-centre-back of the panel for starting the game. Below the panel, in the white
-lower front, a dark-grey metal coin door with two coin slots, each with a
-small coin-return button and a small blank red label above it, a small round
-key lock, and a rectangular black speaker grille beside the door. Plain dark
-grey studio background, soft even lighting, no logo, no brand name,
+beside the front; the lower front of the cabinet is glossy white. Below
+the glass, a wide, nearly flat brushed-silver control panel with a black
+trim, divided by thin dark lines into three framed sections, with five round
+white plastic push buttons. The left section, the widest: two buttons side
+by side close together in its middle, set between painted
+yellow-orange-red chevron arrows pointing outwards to the left and to the
+right, like one long double-headed arrow, and below them a blank plain silver
+plate for instructions. The middle section: one button under painted
+yellow-orange-red chevrons pointing upwards. The right section: two buttons
+stacked one above the other at its right side. Below the panel, in the
+white lower front, a dark-grey metal coin door with two coin slots side by
+side near its top, a small blank red label at the outer side of each slot,
+two small coin-return levers below them, and a rectangular black speaker
+grille to the left of the coin door. Plain dark grey studio background, soft even lighting, no logo, no brand name,
 orthographic, high detail, photorealistic, 9:16 aspect ratio. Avoid: text,
 letters, numbers, logos, brand names, creatures, aliens, spaceships,
 figures, people, joystick, reflections on the glass, side view, tilt
 ```
 
-**If the control panel comes out flat or hidden,** add "the control panel
-is shown from slightly above, like a shelf". **If the cabinet is too narrow
-in the frame,** add "the cabinet fills most of the frame's width".
+**If the control panel is hidden,** add "the control panel is shown from
+slightly above, like a shelf". **If the buttons are bunched together,**
+generate the panel alone first (the same text from "a wide, nearly flat
+brushed-silver control panel" to "at its right side", as "top-down
+photograph of …"), to see whether the generator understands the layout.
+**If the cabinet is too narrow in the frame,** add "the cabinet fills most
+of the frame's width".
 
 ## 2. The glass and its moon backdrop
 
@@ -105,9 +113,12 @@ orange title), in Go's fonts (BSD).
 - **Generate several, pick the most front-on.** Generators rarely give a
   perfectly straight view. Small skew can be fixed with a perspective
   correction in any image editor.
-- **Check the buttons:** five, round, in the right places. The pressed-button
-  sprites are cut from the same image, so no separate button prompt is
-  needed.
+- **Check the buttons:** five, round, in three sections: left and right
+  together inside the outward arrow, fire alone under the upward chevrons,
+  1P and 2P stacked at the right. The pressed-button sprites are cut from
+  the same image, so no separate button prompt is needed. The instruction
+  plate stays blank; `cmd/cabinet-gen` writes our own short instructions on
+  it.
 - **Save the masters in `assets/source/`** (git-ignored, outside the
   repository's history) with the generator's own file names, and tell me
   which is which. The recipe (`assets/cabinet/recipe.json`) records the
