@@ -71,9 +71,9 @@ type recipe struct {
 	Marquee insert `json:"marquee"`
 	// Screen is the window in the glass where the picture is drawn.
 	Screen rectJSON `json:"screen"`
-	// Upper is the cabinet from its top to the control panel's front edge,
-	// shown when the whole cabinet would make the picture too small.
-	Upper    rectJSON     `json:"upper"`
+	// Frame is what the cabinet view shows to start with: from the
+	// cabinet's top to the control panel's front edge.
+	Frame    rectJSON     `json:"frame"`
 	Controls []controlRec `json:"controls"`
 	Texts    []textRec    `json:"texts"`
 }
@@ -203,7 +203,7 @@ func build(rc *recipe, masters map[string]*image.NRGBA) (outputs, error) {
 		Image: imageBase, Backdrop: backdropFile,
 		Screen:  relative(screen, crop.Min),
 		Marquee: relative(rc.Marquee.To.rect(), crop.Min),
-		Upper:   relative(rc.Upper.rect(), crop.Min),
+		Frame:   relative(rc.Frame.rect(), crop.Min),
 	}
 
 	out.cab.Controls = controls(rc.Controls, master, crop.Min, out.pressed)

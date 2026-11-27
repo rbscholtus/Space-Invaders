@@ -12,7 +12,7 @@ func testCabinet() Cabinet {
 		Image: "cabinet", Backdrop: "backdrop.jpg",
 		Screen:  Rect{X: 300, Y: 300, W: 400, H: 460},
 		Marquee: Rect{X: 100, Y: 50, W: 800, H: 200},
-		Upper:   Rect{W: 1000, H: 1250},
+		Frame:   Rect{W: 1000, H: 1250},
 		Controls: []Control{
 			{ID: Left, Kind: Button, Pressed: "left-pressed", CX: 200, CY: 1100, R: 30},
 			{ID: Right, Kind: Button, Pressed: "right-pressed", CX: 280, CY: 1100, R: 30},
@@ -69,9 +69,9 @@ func TestValidateRejects(t *testing.T) {
 		"no fire button":     func(c *Cabinet) { c.Controls[2].ID = "shoot" },
 		"no lock":            func(c *Cabinet) { c.Controls = c.Controls[:7] },
 		"no coin slot":       func(c *Cabinet) { c.Controls[5].ID = "coin3" },
-		"upper outside":      func(c *Cabinet) { c.Upper.H = 2500 },
-		"upper cuts screen":  func(c *Cabinet) { c.Upper.H = 700 },
-		"button below upper": func(c *Cabinet) { c.Upper.H = 1160 },
+		"frame outside":      func(c *Cabinet) { c.Frame.H = 2500 },
+		"frame cuts screen":  func(c *Cabinet) { c.Frame.H = 700 },
+		"button below frame": func(c *Cabinet) { c.Frame.H = 1160 },
 	} {
 		c := testCabinet()
 		change(&c)

@@ -1,17 +1,16 @@
 import { test, expect } from "@playwright/test";
 import { appLayout, pressKey, waitForApp } from "./app";
 
-// The views (DESIGN §11.1). The desktop project's window is landscape, so
-// auto shows the cabinet's upper part, with the picture inside it.
+// The views (DESIGN §11.1). Auto shows the cabinet's frame (from its top to
+// the control panel), with the picture inside it.
 
-test("a landscape window shows the cabinet's upper part, and its art loads", async ({ page }) => {
+test("the cabinet is shown with the picture in it, and its art loads", async ({ page }) => {
   await page.goto("/");
   await waitForApp(page);
 
   await expect.poll(async () => (await appLayout(page))?.art, { intervals: [300] }).toBe(true);
   const lay = (await appLayout(page))!;
   expect(lay.view).toBe("cabinet");
-  expect(lay.part).toBe("upper");
   // The picture is inside the cabinet, which runs on below the window.
   expect(lay.tube.x).toBeGreaterThan(lay.cabinet.x);
   expect(lay.tube.y).toBeGreaterThan(lay.cabinet.y);

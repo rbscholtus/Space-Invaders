@@ -122,9 +122,10 @@ type Cabinet struct {
 	Screen Rect `json:"screen"`
 	// Marquee is the backlit title panel.
 	Marquee Rect `json:"marquee"`
-	// Upper is the cabinet's upper part, from its top to the control
-	// panel: what a landscape window shows, so the picture is bigger.
-	Upper    Rect      `json:"upper"`
+	// Frame is what the cabinet view shows to start with: from the
+	// cabinet's top to the control panel's front, the marquee, the picture
+	// and the buttons, without the coin door (DESIGN §11.1).
+	Frame    Rect      `json:"frame"`
 	Controls []Control `json:"controls"`
 }
 
@@ -161,9 +162,9 @@ func (c *Cabinet) Validate() error {
 		return fmt.Errorf("%w: screen %+v not inside the cabinet", ErrInvalid, c.Screen)
 	case c.Marquee.W <= 0 || c.Marquee.H <= 0 || !c.Marquee.Inside(whole):
 		return fmt.Errorf("%w: marquee %+v not inside the cabinet", ErrInvalid, c.Marquee)
-	case !c.Upper.Inside(whole) || !c.Screen.Inside(c.Upper) || !c.Marquee.Inside(c.Upper):
-		return fmt.Errorf("%w: upper part %+v must be inside the cabinet, holding the marquee and screen",
-			ErrInvalid, c.Upper)
+	case !c.Frame.Inside(whole) || !c.Screen.Inside(c.Frame) || !c.Marquee.Inside(c.Frame):
+		return fmt.Errorf("%w: frame %+v must be inside the cabinet, holding the marquee and screen",
+			ErrInvalid, c.Frame)
 	}
 
 	if err := c.validateControls(whole); err != nil {
@@ -298,8 +299,8 @@ func (c *Cabinet) validateControls(whole Rect) error {
 			return fmt.Errorf("%w: control %q outside the cabinet", ErrInvalid, ctl.ID)
 		case b.Overlaps(c.Screen):
 			return fmt.Errorf("%w: control %q overlaps the screen", ErrInvalid, ctl.ID)
-		case ctl.Kind == Button && !b.Inside(c.Upper):
-			return fmt.Errorf("%w: button %q not in the upper part", ErrInvalid, ctl.ID)
+		case ctl.Kind == Button && !b.Inside(c.Frame):
+			return fmt.Errorf("%w: button %q not in the frame", ErrInvalid, ctl.ID)
 		}
 
 		seen[ctl.ID] = true

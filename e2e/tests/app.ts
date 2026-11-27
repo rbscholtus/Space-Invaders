@@ -19,7 +19,6 @@ export type Box = { x: number; y: number; w: number; h: number };
 export type AppLayout = {
   view: "cabinet" | "screen";
   chosen: "auto" | "cabinet" | "screen";
-  part: "whole" | "upper" | "";
   tube: Box;
   cabinet: Box;
   art: boolean;

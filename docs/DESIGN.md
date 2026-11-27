@@ -594,18 +594,32 @@ directly than the demo did.
 | **Cabinet** | The whole upright cabinet: marquee, bezel, screen, control panel (joystick or buttons, fire, 1P/2P start), coin door with a coin slot. | Default when the window is big enough. |
 | **Screen** | Only the picture: phosphor + colour overlay + moon backdrop, with a thin bezel. Touch controls under or beside it on touch screens. | Default on small screens (phones), or when chosen. |
 
-- **How much of the cabinet** (`internal/app/view.go`, M5b). A landscape
-  window shows the cabinet's **upper part**, from its top to the control
-  panel (`upper` in `cabinet.json`). The rest of the cabinet runs on below
-  the window's bottom edge, so the picture is about 1.5× as big as with the
-  whole cabinet. A portrait window, such as a tablet held upright, shows the
-  **whole cabinet** when the picture is at least 256 CSS pixels tall in it
-  (the game's own height); otherwise it too shows the upper part. In a
-  window too narrow for that to be bigger, as on a phone, that is the whole
-  cabinet anyway, centred.
-- **Auto:** "Screen" when the cabinet would make the picture less than 160
+- **How much of the cabinet** (`internal/app/view.go`, M5b). The picture
+  comes first; the cabinet is decoration. The cabinet view shows its
+  **frame** (`frame` in `cabinet.json`): from the cabinet's top edge to the
+  control panel's front, so the marquee, the picture and the buttons,
+  without the coin door or the space around. The frame is as big as fits,
+  centred, and the cabinet runs on past it where the window has room.
+  Compared with the whole cabinet, that makes the picture about 1.4× as big.
+  In M5c the player can zoom from there (below).
+- **Auto:** "Screen" when the frame would make the picture less than 160
   CSS pixels tall, as on a phone held sideways ⚠ tune on devices. (The
   first plan, 512 real pixels, chose the screen view on most laptops.)
+- **Zoom (M5c, decided).** The player zooms between the whole cabinet and
+  a limit: the desktop's usual keys (Cmd/Ctrl with `+`, `−`, `0`) and
+  Ctrl+scroll (how a Mac trackpad's pinch reaches the browser; the page
+  stops the browser zooming itself), and a pinch on touch screens. On the
+  desktop the limit is the picture alone (the screen view). On touch
+  screens it is the picture and the buttons, as they are the controls.
+  Zooming in past that shows the screen view with its own touch buttons,
+  which gives phones in portrait the biggest picture. A pinch only counts
+  when both fingers start away from the buttons, as moving and firing is
+  two fingers too. The zoom is remembered.
+- **Double tap or double-click (M5c, M5d, decided):** on the marquee, the
+  settings; on the instruction plate, a coin (a single tap does nothing,
+  so a stray touch costs nothing); anywhere else, back to the frame. The
+  coin door isn't in the frame, so this is how touch players insert coins
+  and open the settings.
 - **Overrides:** `-view=auto|cabinet|screen` (desktop flag), `?view=...`
   (URL parameter, through `platform` params as in Chippie), a key (`V`) and
   (M5d) a setting. `V` switches between the cabinet and the screen, and that
@@ -706,7 +720,7 @@ at 1680×1920. Phones are still to be measured.
   cabinet, draws our lettering, and writes pre-scaled `@1x`, `@2x`, `@3x`
   files into `assets/cabinet/`: the cabinet, the pressed buttons, and
   `backdrop.jpg` (the glass art behind the picture, §11.3). Layout positions
-  (screen, marquee, the upper part (§11.1), buttons, coin slots, lock) come
+  (screen, marquee, the frame (§11.1), buttons, coin slots, lock) come
   from `cabinet.json`
   (`internal/app/cabinet`), not code. The prompts are in
   [cabinet-artwork.md](cabinet-artwork.md); `go run ./cmd/cabinet-gen

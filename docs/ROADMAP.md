@@ -99,11 +99,14 @@ In four PRs, each playable and deployed:
     marquee, made from generated masters by `cmd/cabinet-gen`;
   - the moon backdrop (additive, §11.3);
   - `cabinet.json`;
-  - cabinet and screen views, chosen by size (the upper part of the cabinet
-    in landscape, §11.1), `-view` / `?view=` / `V`, remembered.
-- **M5c, controls:** the clickable coin slot and buttons; touch controls in
-  the screen view; gamepads.
-- **M5d, settings:** behind the coin door (its lock, or `S`): lives, bonus,
+  - cabinet and screen views, chosen by size (the cabinet's frame, from its
+    top to the control panel, §11.1), `-view` / `?view=` / `V`,
+    remembered.
+- **M5c, controls:** the clickable buttons; touch controls in the screen
+  view; gamepads. Zooming (keys, Ctrl+scroll, pinch), double tap or click
+  for a coin (the instruction plate) and back to the frame (§11.1).
+- **M5d, settings:** a double tap or click on the marquee, the coin door's
+  lock, or `S`: lives, bonus,
   view, volume, About. Also `?lives=` and `?bonus1000`, matching the flags.
 
 ## Ideas

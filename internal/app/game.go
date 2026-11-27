@@ -438,22 +438,13 @@ func (g *Game) css(r image.Rectangle) cssRect {
 // changes: the view, where the picture and the cabinet are (CSS pixels),
 // and whether the cabinet's art has loaded.
 func (g *Game) publishLayout() {
-	part := ""
-	if g.lay.view == ViewCabinet {
-		part = "whole"
-		if g.lay.upper {
-			part = "upper"
-		}
-	}
-
 	lay, err := json.Marshal(struct {
 		View    string  `json:"view"`
 		Chosen  string  `json:"chosen"`
-		Part    string  `json:"part"`
 		Tube    cssRect `json:"tube"`
 		Cabinet cssRect `json:"cabinet"`
 		Art     bool    `json:"art"`
-	}{g.lay.view.String(), g.view.String(), part, g.css(g.lay.tube), g.css(g.lay.cabinet), g.cabinet.loaded()})
+	}{g.lay.view.String(), g.view.String(), g.css(g.lay.tube), g.css(g.lay.cabinet), g.cabinet.loaded()})
 	if err != nil || string(lay) == g.layout {
 		return
 	}

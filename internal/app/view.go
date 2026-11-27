@@ -50,25 +50,14 @@ func (v View) String() string {
 	return "auto"
 }
 
-// The picture's height in CSS pixels decides the view (DESIGN §11.1;
-// ⚠ tune on devices). 256 is the game's own height.
-const (
-	// minCabinetPicture: auto shows the screen view when the cabinet would
-	// make the picture smaller than this, as on a phone held sideways.
-	minCabinetPicture = 160
-	// minWholePicture: a portrait window (a tablet held upright) shows the
-	// whole cabinet when the picture is at least this tall in it;
-	// otherwise, and in every landscape window, the cabinet's upper part.
-	minWholePicture = 256
-	// cabinetMargin is the room around the cabinet, as a share of the
-	// window's smaller side.
-	cabinetMargin = 0.02
-)
+// minCabinetPicture is the smallest picture, in CSS pixels, for which auto
+// shows the cabinet: below it, as on a phone held sideways, the picture
+// alone (DESIGN §11.1; ⚠ tune on devices). The game's own height is 256.
+const minCabinetPicture = 160
 
 // layout is where things go in the window, in real pixels.
 type layout struct {
-	view  View // ViewCabinet or ViewScreen: what's shown
-	upper bool // the cabinet view shows the upper part, running on below the window
+	view View // ViewCabinet or ViewScreen: what's shown
 	// cabinet is the whole cabinet image, which may reach past the window.
 	cabinet image.Rectangle
 	k       float64         // real pixels per cabinet pixel
@@ -83,54 +72,24 @@ func computeLayout(cab *cabinet.Cabinet, w, h int, scale float64, choice View) l
 		return screen
 	}
 
-	css := func(l layout) float64 { return float64(l.tube.Dy()) / scale }
-
-	l := fitCabinet(cab, w, h, true)
-
-	if h > w {
-		if whole := fitCabinet(cab, w, h, false); css(whole) >= minWholePicture {
-			l = whole
-		}
-	}
-
-	if choice == ViewAuto && css(l) < minCabinetPicture {
+	l := fitFrame(cab, w, h)
+	if choice == ViewAuto && float64(l.tube.Dy())/scale < minCabinetPicture {
 		return screen
 	}
 
 	return l
 }
 
-// fitCabinet places the whole cabinet, centred, as big as fits; or its
-// upper part, as big as fits from the top of the window, the rest of the
-// cabinet running on below the window's bottom edge. In a window too narrow
-// for the upper part to be bigger, that's the whole cabinet, centred.
-func fitCabinet(cab *cabinet.Cabinet, w, h int, upper bool) layout {
-	ww, wh := float64(w), float64(h)
-	m := min(ww, wh) * cabinetMargin
+// fitFrame shows the cabinet's frame (from its top to the control panel)
+// as big as fits, centred. The cabinet runs on past it where the window
+// has room, and past the window's edges.
+func fitFrame(cab *cabinet.Cabinet, w, h int) layout {
+	f := cab.Frame
+	k := max(min(float64(w)/f.W, float64(h)/f.H), 0)
+	x := (float64(w)-f.W*k)/2 - f.X*k
+	y := (float64(h)-f.H*k)/2 - f.Y*k
 
-	if !upper {
-		k := max(min((ww-2*m)/cab.Width, (wh-2*m)/cab.Height), 0)
-		x, y := (ww-cab.Width*k)/2, (wh-cab.Height*k)/2
-
-		return placed(cab, x, y, k, false)
-	}
-
-	part := cab.Upper
-	k := max(min((ww-2*m)/part.W, (wh-m)/part.H), 0)
-	x := (ww-part.W*k)/2 - part.X*k
-
-	if cab.Height*k <= wh-2*m {
-		// A narrow window: the whole cabinet fits at this size anyway.
-		return placed(cab, x, (wh-cab.Height*k)/2, k, false)
-	}
-
-	return placed(cab, x, m-part.Y*k, k, true)
-}
-
-// placed is the cabinet view with the cabinet's top left at (x, y), k real
-// pixels per cabinet pixel.
-func placed(cab *cabinet.Cabinet, x, y, k float64, upper bool) layout {
-	l := layout{view: ViewCabinet, upper: upper, k: k}
+	l := layout{view: ViewCabinet, k: k}
 	l.cabinet = roundRect(x, y, x+cab.Width*k, y+cab.Height*k)
 	l.tube = l.rect(cab.Screen)
 

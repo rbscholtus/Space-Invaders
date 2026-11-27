@@ -215,7 +215,7 @@ func TestBuild(t *testing.T) {
 	rc.Glass = insert{Source: "glass", From: rectJSON{W: 280, H: 200}, To: rectJSON{X: 60, Y: 160, W: 280, H: 200}}
 	rc.Marquee = insert{Source: "marquee", From: rectJSON{W: 320, H: 80}, To: rectJSON{X: 40, Y: 40, W: 320, H: 80}}
 	rc.Screen = rectJSON{X: 150, Y: 170, W: 100, H: 180}
-	rc.Upper = rectJSON{X: 10, Y: 10, W: 380, H: 480}
+	rc.Frame = rectJSON{X: 10, Y: 10, W: 380, H: 480}
 	rc.Controls = []controlRec{
 		{ID: cabinet.Left, Kind: cabinet.Button, CX: 80, CY: 450, R: 15},
 		{ID: cabinet.Right, Kind: cabinet.Button, CX: 130, CY: 450, R: 15},
@@ -237,9 +237,9 @@ func TestBuild(t *testing.T) {
 
 	c := out.cab
 	if c.Width != 380 || c.Height != 780 || c.Screen != (cabinet.Rect{X: 140, Y: 160, W: 100, H: 180}) ||
-		c.Upper != (cabinet.Rect{W: 380, H: 480}) {
-		t.Errorf("cabinet %gx%g, screen %+v, upper %+v: want everything relative to the crop",
-			c.Width, c.Height, c.Screen, c.Upper)
+		c.Frame != (cabinet.Rect{W: 380, H: 480}) {
+		t.Errorf("cabinet %gx%g, screen %+v, frame %+v: want everything relative to the crop",
+			c.Width, c.Height, c.Screen, c.Frame)
 	}
 
 	if ctl, _ := c.Control(cabinet.Fire); ctl.CX != 190 || ctl.CY != 440 || ctl.Pressed != "fire-pressed" {

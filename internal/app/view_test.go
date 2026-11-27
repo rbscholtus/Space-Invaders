@@ -33,7 +33,8 @@ func TestParseView(t *testing.T) {
 	}
 }
 
-// The view and how much of the cabinet it shows, by window (DESIGN §11.1).
+// The view by window (DESIGN §11.1): the cabinet's frame, centred, unless
+// the picture would be too small in it.
 func TestComputeLayout(t *testing.T) {
 	t.Parallel()
 
@@ -45,20 +46,19 @@ func TestComputeLayout(t *testing.T) {
 		scale  float64
 		choice View
 		view   View
-		upper  bool
 	}{
-		{"laptop: the upper part", 1440, 820, 2, ViewAuto, ViewCabinet, true},
-		{"tablet upright: the whole cabinet", 820, 1180, 2, ViewAuto, ViewCabinet, false},
-		{"phone: the whole cabinet fits as big", 390, 844, 3, ViewAuto, ViewCabinet, false},
-		{"phone sideways: the picture alone", 844, 390, 3, ViewAuto, ViewScreen, false},
-		{"phone sideways, cabinet chosen", 844, 390, 3, ViewCabinet, ViewCabinet, true},
-		{"laptop, screen chosen", 1440, 820, 2, ViewScreen, ViewScreen, false},
+		{"laptop", 1440, 820, 2, ViewAuto, ViewCabinet},
+		{"tablet upright", 820, 1180, 2, ViewAuto, ViewCabinet},
+		{"phone", 390, 844, 3, ViewAuto, ViewCabinet},
+		{"phone sideways: the picture alone", 844, 390, 3, ViewAuto, ViewScreen},
+		{"phone sideways, cabinet chosen", 844, 390, 3, ViewCabinet, ViewCabinet},
+		{"laptop, screen chosen", 1440, 820, 2, ViewScreen, ViewScreen},
 	} {
 		w, h := int(float64(tc.w)*tc.scale), int(float64(tc.h)*tc.scale)
 		l := computeLayout(cab, w, h, tc.scale, tc.choice)
 
-		if l.view != tc.view || l.upper != tc.upper {
-			t.Errorf("%s: view %v, upper %v; want %v, %v", tc.name, l.view, l.upper, tc.view, tc.upper)
+		if l.view != tc.view {
+			t.Errorf("%s: view %v, want %v", tc.name, l.view, tc.view)
 
 			continue
 		}
@@ -73,36 +73,19 @@ func TestComputeLayout(t *testing.T) {
 			t.Errorf("%s: the picture's shape is %.3f, want %.3f", tc.name, got, want)
 		}
 
-		if l.view == ViewCabinet && l.upper {
-			// The control panel is in the window; the coin door is below it.
-			fire, _ := cab.Control(cabinet.Fire)
-			lock, _ := cab.Control(cabinet.Door)
+		if l.view != ViewCabinet {
+			continue
+		}
 
-			if r := l.rect(fire.Bounds()); r.Max.Y > h {
-				t.Errorf("%s: the fire button at %v is below the window", tc.name, r)
-			}
-
-			if r := l.rect(lock.Bounds()); r.Min.Y < h {
-				t.Errorf("%s: the lock at %v is in the window", tc.name, r)
-			}
+		// The whole frame is in the window, and it fills its width or height.
+		if f := l.rect(cab.Frame); f.Min.X < -1 || f.Min.Y < -1 || f.Max.X > w+1 || f.Max.Y > h+1 ||
+			(f.Dx() < w-2 && f.Dy() < h-2) {
+			t.Errorf("%s: the frame %v doesn't fit the %dx%d window", tc.name, f, w, h)
 		}
 	}
 
 	if l := computeLayout(nil, 800, 600, 1, ViewCabinet); l.view != ViewScreen {
 		t.Errorf("without a cabinet: view %v, want the screen", l.view)
-	}
-}
-
-// The upper part makes the picture bigger in a landscape window than the
-// whole cabinet would.
-func TestUpperIsBigger(t *testing.T) {
-	t.Parallel()
-
-	cab := realCabinet(t)
-	whole, upper := fitCabinet(cab, 1440, 820, false), fitCabinet(cab, 1440, 820, true)
-
-	if ratio := float64(upper.tube.Dy()) / float64(whole.tube.Dy()); ratio < 1.3 {
-		t.Errorf("the upper part's picture is %.2f× the whole cabinet's, want at least 1.3×", ratio)
 	}
 }
 
