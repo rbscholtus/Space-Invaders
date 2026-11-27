@@ -89,6 +89,35 @@ func TestComputeLayout(t *testing.T) {
 	}
 }
 
+// As the window gets narrower, the frame's top stays at the window's top
+// and more of the cabinet shows below it, until all of it shows; then the
+// room left is shared equally above and below.
+func TestFrameInNarrowWindows(t *testing.T) {
+	t.Parallel()
+
+	cab := realCabinet(t)
+	frameTop := func(l layout) int { return l.rect(cab.Frame).Min.Y }
+
+	if l := fitFrame(cab, 2000, 1000); frameTop(l) != 0 || l.rect(cab.Frame).Max.Y != 1000 {
+		t.Errorf("wide window: the frame is at %v, want it from top to bottom", l.rect(cab.Frame))
+	}
+
+	// A little narrower than the frame: its top stays put, the cabinet's
+	// bottom is below the window.
+	if l := fitFrame(cab, 760, 1000); frameTop(l) != 0 || l.cabinet.Max.Y <= 1000 {
+		t.Errorf("a little narrower: frame top %d, cabinet bottom %d", frameTop(l), l.cabinet.Max.Y)
+	}
+
+	// Much narrower: the whole cabinet below the frame's top shows,
+	// centred.
+	l := fitFrame(cab, 400, 1000)
+	above, below := frameTop(l), 1000-l.cabinet.Max.Y
+
+	if above <= 0 || below <= 0 || above-below > 1 || below-above > 1 {
+		t.Errorf("much narrower: %d above the frame, %d below the cabinet; want equal", above, below)
+	}
+}
+
 func TestSavedView(t *testing.T) {
 	t.Parallel()
 

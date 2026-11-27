@@ -597,10 +597,13 @@ directly than the demo did.
 - **How much of the cabinet** (`internal/app/view.go`, M5b). The picture
   comes first; the cabinet is decoration. The cabinet view shows its
   **frame** (`frame` in `cabinet.json`): from the cabinet's top edge to the
-  control panel's front, so the marquee, the picture and the buttons,
-  without the coin door or the space around. The frame is as big as fits,
-  centred, and the cabinet runs on past it where the window has room.
-  Compared with the whole cabinet, that makes the picture about 1.4× as big.
+  control panel's edge, so the marquee, the picture and the buttons,
+  without the panel's front, the coin door or the space around. The frame
+  is as big as fits, centred across, its top at the window's top. In a
+  window narrower than the frame, more of the cabinet shows below it; once
+  all of it shows (a phone held upright), the cabinet is centred, with as
+  much room above as below. Compared with the whole cabinet, that makes the
+  picture about 1.5× as big in a landscape window.
   In M5c the player can zoom from there (below).
 - **Auto:** "Screen" when the frame would make the picture less than 160
   CSS pixels tall, as on a phone held sideways ⚠ tune on devices. (The

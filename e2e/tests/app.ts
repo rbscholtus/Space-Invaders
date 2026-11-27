@@ -21,6 +21,7 @@ export type AppLayout = {
   chosen: "auto" | "cabinet" | "screen";
   tube: Box;
   cabinet: Box;
+  frame: Box;
   art: boolean;
 };
 

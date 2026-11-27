@@ -419,6 +419,15 @@ func (g *Game) publishState() {
 	platform.PublishState(g.state)
 }
 
+// frame is where the cabinet's frame is in the cabinet view.
+func (g *Game) frame() image.Rectangle {
+	if g.lay.view != ViewCabinet {
+		return image.Rectangle{}
+	}
+
+	return g.lay.rect(g.cabinet.cab.Frame)
+}
+
 // cssRect is a rectangle in CSS pixels, for the browser tests.
 type cssRect struct {
 	X float64 `json:"x"`
@@ -443,8 +452,12 @@ func (g *Game) publishLayout() {
 		Chosen  string  `json:"chosen"`
 		Tube    cssRect `json:"tube"`
 		Cabinet cssRect `json:"cabinet"`
+		Frame   cssRect `json:"frame"`
 		Art     bool    `json:"art"`
-	}{g.lay.view.String(), g.view.String(), g.css(g.lay.tube), g.css(g.lay.cabinet), g.cabinet.loaded()})
+	}{
+		g.lay.view.String(), g.view.String(), g.css(g.lay.tube), g.css(g.lay.cabinet), g.css(g.frame()),
+		g.cabinet.loaded(),
+	})
 	if err != nil || string(lay) == g.layout {
 		return
 	}

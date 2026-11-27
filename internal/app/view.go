@@ -81,13 +81,15 @@ func computeLayout(cab *cabinet.Cabinet, w, h int, scale float64, choice View) l
 }
 
 // fitFrame shows the cabinet's frame (from its top to the control panel)
-// as big as fits, centred. The cabinet runs on past it where the window
-// has room, and past the window's edges.
+// as big as fits, centred across, with its top at the window's top. In a
+// window narrower than the frame, more of the cabinet shows below it; once
+// all of it shows, the cabinet from the frame's top down is centred, with
+// as much room above as below.
 func fitFrame(cab *cabinet.Cabinet, w, h int) layout {
 	f := cab.Frame
 	k := max(min(float64(w)/f.W, float64(h)/f.H), 0)
 	x := (float64(w)-f.W*k)/2 - f.X*k
-	y := (float64(h)-f.H*k)/2 - f.Y*k
+	y := max(0, (float64(h)-(cab.Height-f.Y)*k)/2) - f.Y*k
 
 	l := layout{view: ViewCabinet, k: k}
 	l.cabinet = roundRect(x, y, x+cab.Width*k, y+cab.Height*k)
