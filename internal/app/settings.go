@@ -12,6 +12,7 @@ const (
 	prefVolume  = "volume"  // 0–100
 	prefMuted   = "muted"   // "1" when muted
 	prefHiScore = "hiscore" // the game's HI-SCORE, 0–9999
+	prefView    = "view"    // the view last chosen with V: "cabinet" or "screen"
 )
 
 // prefsStore is what the settings need from platform.Prefs.
@@ -32,6 +33,22 @@ func applySaved(s *sound.Stream, p prefsStore, volumeGiven bool) {
 	if v, _ := p.Get(prefMuted); v == "1" {
 		s.SetMuted(true)
 	}
+}
+
+// savedView returns the view to start with: the one given at start (-view,
+// ?view=), else the one last chosen with V, else auto.
+func savedView(p prefsStore, given View, wasGiven bool) View {
+	if wasGiven {
+		return given
+	}
+
+	if s, ok := p.Get(prefView); ok {
+		if v, err := ParseView(s); err == nil {
+			return v
+		}
+	}
+
+	return given
 }
 
 // saveSound remembers the stream's volume and mute.

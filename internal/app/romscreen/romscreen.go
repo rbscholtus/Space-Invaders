@@ -191,7 +191,7 @@ func (f *Flow) Controls() []string {
 		fmt.Sprintf("%-*s%s", keyColumn, "1 or 2", "1 or 2 players"),
 		fmt.Sprintf("%-*s%s", keyColumn, "Left Right", "move"),
 		fmt.Sprintf("%-*s%s", keyColumn, "Space", "fire"),
-		fmt.Sprintf("%-*s%s", keyColumn, "P", "pause"),
+		fmt.Sprintf("%-*s%s", keyColumn, "P / V", "pause / view"),
 		fmt.Sprintf("%-*s%s", keyColumn, "M, - and =", "mute, volume"),
 		roms,
 	}

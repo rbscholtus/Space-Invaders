@@ -94,13 +94,13 @@ In four PRs, each playable and deployed:
 - **M5a, shaders ✅:** phosphor afterglow and the CRT, with the overlay
   moved from the CPU into the shader; `-shader clean` / `?shader=clean`
   (DESIGN §11.4).
-- **M5b, the cabinet:**
+- **M5b, the cabinet ✅:**
   - original art in Midway's style (DESIGN §12), with "1978 INVASION" on the
     marquee, made from generated masters by `cmd/cabinet-gen`;
   - the moon backdrop (additive, §11.3);
   - `cabinet.json`;
-  - cabinet and screen views, chosen by size, `-view` / `?view=` / `V`,
-    remembered.
+  - cabinet and screen views, chosen by size (the upper part of the cabinet
+    in landscape, §11.1), `-view` / `?view=` / `V`, remembered.
 - **M5c, controls:** the clickable coin slot and buttons; touch controls in
   the screen view; gamepads.
 - **M5d, settings:** behind the coin door (its lock, or `S`): lives, bonus,

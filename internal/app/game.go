@@ -12,6 +12,8 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
+	"github.com/rbscholtus/Space-Invaders/assets"
+	"github.com/rbscholtus/Space-Invaders/internal/app/cabinet"
 	"github.com/rbscholtus/Space-Invaders/internal/app/crt"
 	"github.com/rbscholtus/Space-Invaders/internal/app/input"
 	"github.com/rbscholtus/Space-Invaders/internal/app/overlay"
@@ -48,6 +50,13 @@ type Options struct {
 	// Shader is how the picture is drawn: the CRT monitor, or clean
 	// (-shader, ?shader=).
 	Shader crt.Mode
+	// View is the cabinet, the picture alone, or either by the window's
+	// size (-view, ?view=). ViewGiven says the player chose it at start;
+	// otherwise the one last chosen with V is used.
+	View      View
+	ViewGiven bool
+	// Art reads the cabinet's images; nil shows the picture alone.
+	Art ArtFetcher
 	// OnError is told about problems that don't stop the game, such as
 	// no audio device (the game then runs silently).
 	OnError func(error)
@@ -66,13 +75,18 @@ type Game struct {
 	flow     *romscreen.Flow
 	controls input.Controls
 	monitor  *crt.Renderer
+	cabinet  *cabinetView
 	settings Options
+	view     View       // the view chosen: auto, cabinet or screen
+	lay      layout     // where things go, from Layout
+	keys     input.Keys // the keys held, for the pressed buttons
 
 	cache    *platform.Cache
 	prefs    *platform.Prefs
 	restored chan restored
 	incoming chan platform.Picked // dropped or picked files, read in goroutines
 	state    string               // the last state published for the browser tests
+	layout   string               // the last layout published
 	hiScore  int                  // the HI-SCORE last remembered
 
 	frames     *sound.Frames
@@ -108,8 +122,10 @@ func New(opts Options) *Game {
 	}
 
 	g.monitor = newMonitor(opts)
+	g.cabinet = newCabinetView(loadCabinet(opts), opts.Art)
 
 	applySaved(g.stream, g.prefs, opts.VolumeGiven)
+	g.view = savedView(g.prefs, opts.View, opts.ViewGiven)
 
 	if opts.ROMs != nil {
 		g.flow.Start()
@@ -122,6 +138,22 @@ func New(opts Options) *Game {
 	}
 
 	return g
+}
+
+// loadCabinet reads the cabinet's layout. It was checked when it was made,
+// so it only fails if the build is broken: then the app shows the picture
+// alone.
+func loadCabinet(opts Options) *cabinet.Cabinet {
+	cab, err := cabinet.Parse(assets.CabinetJSON)
+	if err != nil {
+		if opts.OnError != nil {
+			opts.OnError(err)
+		}
+
+		return nil
+	}
+
+	return cab
 }
 
 // keys reads the keyboard as mapped in DESIGN §13.
@@ -148,7 +180,9 @@ func (g *Game) Update() error {
 	g.startAudio()
 	g.handleKeys()
 	g.handleROMs()
+	g.updateCabinet()
 	g.publishState()
+	g.publishLayout()
 
 	g.stopped = g.paused || !platform.InFront(ebiten.IsFocused())
 
@@ -164,7 +198,8 @@ func (g *Game) Update() error {
 		clear(g.screen)
 		g.flow.Draw(g.screen, screenW)
 	} else {
-		g.board.SetInputs(g.controls.Update(keys()))
+		g.keys = keys()
+		g.board.SetInputs(g.controls.Update(g.keys))
 		g.board.RunFrame()
 		g.hiScore = saveHiScore(g.board, g.prefs, g.hiScore)
 		g.stream.Push(g.frames.Render(g.board.SoundEvents()))
@@ -176,24 +211,12 @@ func (g *Game) Update() error {
 	return nil
 }
 
-// Draw draws the monitor, as big as the window allows, keeping its shape.
+// Draw draws the cabinet, if shown, and the monitor in it (DESIGN §11).
 func (g *Game) Draw(dst *ebiten.Image) {
-	w, h := dst.Bounds().Dx(), dst.Bounds().Dy()
-	g.monitor.SetScreen(fitTube(w, h))
+	g.cabinet.draw(dst, g.lay, g.keys)
+	g.monitor.SetBackdropLevel(g.cabinet.backdropLevels(g.lay.view))
+	g.monitor.SetScreen(g.lay.tube)
 	g.monitor.Draw(dst, g.ticks)
-}
-
-// fitTube returns the biggest rectangle of the picture's shape that fits a
-// w×h window, centred.
-func fitTube(w, h int) image.Rectangle {
-	tw, th := w, w*screenH/screenW
-	if th > h {
-		tw, th = h*screenW/screenH, h
-	}
-
-	x, y := (w-tw)/2, (h-th)/2
-
-	return image.Rect(x, y, x+tw, y+th)
 }
 
 // newMonitor makes the renderer in the chosen mode. If the CRT shaders
@@ -217,6 +240,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 	g.scale = ebiten.Monitor().DeviceScaleFactor()
 	g.width = int(float64(outsideWidth) * g.scale)
 	g.height = int(float64(outsideHeight) * g.scale)
+	g.lay = computeLayout(g.cabinet.cab, g.width, g.height, g.scale, g.view)
 
 	return g.width, g.height
 }
@@ -247,8 +271,18 @@ func gesture() bool {
 }
 
 // handleKeys handles the keys that aren't the cabinet's controls (DESIGN
-// §13): P pause, M mute, - and = volume, O open ROM files, F forget them.
+// §13): P pause, M mute, - and = volume, O open ROM files, F forget them,
+// V switch between the cabinet and the picture alone.
 func (g *Game) handleKeys() {
+	if inpututil.IsKeyJustPressed(ebiten.KeyV) && g.cabinet.cab != nil {
+		g.view = ViewCabinet
+		if g.lay.view == ViewCabinet {
+			g.view = ViewScreen
+		}
+
+		g.prefs.Set(prefView, g.view.String())
+	}
+
 	if inpututil.IsKeyJustPressed(ebiten.KeyP) {
 		g.paused = !g.paused
 	}
@@ -383,4 +417,62 @@ func (g *Game) publishState() {
 
 	g.state = string(state)
 	platform.PublishState(g.state)
+}
+
+// cssRect is a rectangle in CSS pixels, for the browser tests.
+type cssRect struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
+	W float64 `json:"w"`
+	H float64 `json:"h"`
+}
+
+func (g *Game) css(r image.Rectangle) cssRect {
+	return cssRect{
+		float64(r.Min.X) / g.scale, float64(r.Min.Y) / g.scale,
+		float64(r.Dx()) / g.scale, float64(r.Dy()) / g.scale,
+	}
+}
+
+// publishLayout puts the layout on the page for the browser tests, when it
+// changes: the view, where the picture and the cabinet are (CSS pixels),
+// and whether the cabinet's art has loaded.
+func (g *Game) publishLayout() {
+	part := ""
+	if g.lay.view == ViewCabinet {
+		part = "whole"
+		if g.lay.upper {
+			part = "upper"
+		}
+	}
+
+	lay, err := json.Marshal(struct {
+		View    string  `json:"view"`
+		Chosen  string  `json:"chosen"`
+		Part    string  `json:"part"`
+		Tube    cssRect `json:"tube"`
+		Cabinet cssRect `json:"cabinet"`
+		Art     bool    `json:"art"`
+	}{g.lay.view.String(), g.view.String(), part, g.css(g.lay.tube), g.css(g.lay.cabinet), g.cabinet.loaded()})
+	if err != nil || string(lay) == g.layout {
+		return
+	}
+
+	g.layout = string(lay)
+	platform.PublishLayout(g.layout)
+}
+
+// updateCabinet loads the cabinet's art as the layout needs it, and gives
+// the monitor its backdrop when it arrives.
+func (g *Game) updateCabinet() {
+	g.cabinet.want(g.lay)
+
+	backdrop, err := g.cabinet.update()
+	if err != nil {
+		g.report(err)
+	}
+
+	if backdrop != nil {
+		g.monitor.SetBackdrop(backdrop)
+	}
 }

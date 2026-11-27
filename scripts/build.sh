@@ -2,6 +2,8 @@
 # Builds the browser version into web/dist/ (DESIGN §17.1):
 #   index.html            the loader page, with wasm_exec.js inlined
 #   invaders-gz.wasm      the app, gzip-compressed (the loader unpacks it)
+#   cabinet/              the cabinet's images, fetched by the app as it
+#                         needs them (assets/cabinet, made by cmd/cabinet-gen)
 #   LICENSE, LICENSE-MAME, NOTICE.txt
 #                         the licence notices binary releases must carry
 #                         (BSD-3 clause 2, DESIGN §19)
@@ -33,6 +35,9 @@ page = page.replace("/*__WASM_EXEC__*/", open(wasm_exec).read()).replace("__WASM
 open(dst, "w").write(page)
 PY
 
+mkdir -p "$out/cabinet"
+cp assets/cabinet/*.jpg assets/cabinet/*.png "$out/cabinet/"
+
 cp LICENSE "$out/LICENSE"
 cp internal/synth/LICENSE-MAME "$out/LICENSE-MAME"
 cat > "$out/NOTICE.txt" <<'TXT'
@@ -42,6 +47,11 @@ The emulator is BSD 3-Clause (LICENSE). Its sound emulation is ported from
 MAME and keeps MAME's BSD 3-Clause notice (LICENSE-MAME). No ROMs are
 included: Space Invaders is a trademark of Taito; this project is not
 affiliated with Taito or Midway.
+
+The cabinet artwork (cabinet/) is original, AI-generated with Google
+Gemini and believed to be in the public domain; its lettering is set in Go
+Bold and Go Medium (Bigelow & Holmes, BSD-style licence). Details:
+https://github.com/rbscholtus/Space-Invaders/blob/main/assets/LICENSES.md
 TXT
 
 echo "built $out: invaders-gz.wasm $((gz_size / 1024)) KB ($((raw_size / 1024)) KB unpacked)"

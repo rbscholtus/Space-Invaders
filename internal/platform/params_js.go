@@ -23,6 +23,7 @@ func URLParams() Params {
 	}
 
 	p.Shader = q.Get("shader")
+	p.View = q.Get("view")
 
 	return p
 }

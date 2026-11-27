@@ -99,11 +99,14 @@ type Renderer struct {
 	tintPix []byte           // the overlay's tint per pixel, RGBA
 	tintFb  *ebiten.Image    // the same, 224×256
 
-	up   *ebiten.Image    // the picture at the render size, nearest-neighbour
-	tint *ebiten.Image    // the tint at the render size
-	phos [2]*ebiten.Image // the afterglow, at the render size
-	out  *ebiten.Image    // the CRT pass, when the tube is bigger than the render size
-	cur  int              // phos[cur] is the latest afterglow
+	up   *ebiten.Image // the picture at the render size, nearest-neighbour
+	tint *ebiten.Image // the tint at the render size
+	back *ebiten.Image // the backdrop at the render size
+	// backdrop is the moon backdrop as given, any size; nil until set.
+	backdrop *ebiten.Image
+	phos     [2]*ebiten.Image // the afterglow, at the render size
+	out      *ebiten.Image    // the CRT pass, when the tube is bigger than the render size
+	cur      int              // phos[cur] is the latest afterglow
 
 	screen image.Rectangle // the tube, in destination pixels
 	size   image.Point     // the render size
@@ -159,6 +162,7 @@ func New(mode Mode, strips []overlay.Rect) (*Renderer, error) {
 	r.crtOpts.Uniforms = map[string]any{
 		"Time": float32(0), "Dim": float32(1), "Scan": float32(0),
 		"Columns": float32(pictureW), "Bloom": float32(0),
+		"Back": float32(0), "BackEdge": float32(0),
 	}
 	r.outOpts.Filter = ebiten.FilterLinear
 
@@ -201,14 +205,14 @@ func (r *Renderer) SetScreen(rect image.Rectangle) {
 
 	r.size = RenderSize(rect.Size())
 
-	for _, img := range []*ebiten.Image{r.up, r.tint, r.phos[0], r.phos[1], r.out} {
+	for _, img := range []*ebiten.Image{r.up, r.tint, r.back, r.phos[0], r.phos[1], r.out} {
 		if img != nil {
 			img.Deallocate()
 		}
 	}
 
 	w, h := r.size.X, r.size.Y
-	r.up, r.tint = ebiten.NewImage(w, h), ebiten.NewImage(w, h)
+	r.up, r.tint, r.back = ebiten.NewImage(w, h), ebiten.NewImage(w, h), ebiten.NewImage(w, h)
 	r.phos[0], r.phos[1] = ebiten.NewImage(w, h), ebiten.NewImage(w, h)
 	r.out = nil
 
@@ -220,11 +224,32 @@ func (r *Renderer) SetScreen(rect image.Rectangle) {
 
 	m.GeoM.Scale(float64(w)/pictureW, float64(h)/pictureH)
 	r.tint.DrawImage(r.tintFb, &m)
+	r.scaleBackdrop()
 
 	pxPerLine := float64(rect.Dx()) / pictureW
 	r.crtOpts.Uniforms["Scan"] = float32(ScanStrength(pxPerLine))
 	r.crtOpts.Uniforms["Bloom"] = float32(bloomReach * float64(h) / pictureH)
 	r.fresh, r.due = true, true
+}
+
+// SetBackdrop sets the moon backdrop seen through the glass (DESIGN
+// §11.3): any size, stretched over the tube. The CRT mode only: the clean
+// picture has none.
+func (r *Renderer) SetBackdrop(img *ebiten.Image) {
+	r.backdrop = img
+	r.scaleBackdrop()
+}
+
+// SetBackdropLevel sets the backdrop's brightness behind the tube, and at
+// and beyond its edge: there it should match the glass around the screen.
+// It can change every frame, to fade the backdrop in.
+func (r *Renderer) SetBackdropLevel(behind, edge float32) {
+	if r.mode != ModeCRT {
+		return
+	}
+
+	r.crtOpts.Uniforms["Back"] = behind
+	r.crtOpts.Uniforms["BackEdge"] = edge
 }
 
 // Screen returns where the tube is drawn.
@@ -284,7 +309,7 @@ func (r *Renderer) Draw(dst *ebiten.Image, tick uint64) {
 
 	r.crtOpts.Uniforms["Time"] = float32(tick) / frameRate
 	r.crtOpts.Uniforms["Dim"] = r.dim
-	r.crtOpts.Images[0], r.crtOpts.Images[1] = r.phos[r.cur], r.tint
+	r.crtOpts.Images[0], r.crtOpts.Images[1], r.crtOpts.Images[2] = r.phos[r.cur], r.tint, r.back
 
 	if r.out == nil {
 		r.crtOpts.GeoM.Reset()
@@ -333,4 +358,25 @@ func (r *Renderer) drawClean(dst *ebiten.Image) {
 	r.upOpts.ColorScale.Reset()
 	r.upOpts.ColorScale.Scale(r.dim, r.dim, r.dim, 1)
 	dst.DrawImage(r.fb, &r.upOpts)
+}
+
+// scaleBackdrop draws the backdrop into the render-sized image the shader
+// reads, as the shader's sources must all be the size it draws.
+func (r *Renderer) scaleBackdrop() {
+	if r.back == nil {
+		return
+	}
+
+	r.back.Clear()
+
+	if r.backdrop == nil {
+		return
+	}
+
+	var m ebiten.DrawImageOptions
+
+	b := r.backdrop.Bounds()
+	m.GeoM.Scale(float64(r.size.X)/float64(b.Dx()), float64(r.size.Y)/float64(b.Dy()))
+	m.Filter = ebiten.FilterLinear
+	r.back.DrawImage(r.backdrop, &m)
 }

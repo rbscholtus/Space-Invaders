@@ -3,15 +3,19 @@
 package main
 
 // Src0: the phosphor buffer (the picture with its afterglow). Src1: the
-// colour overlay's tint, the same size (DESIGN §11.2). Coordinates are in
-// source pixels (srcPos - imageSrc0Origin()), never imageDstSize(), which
-// is the whole destination image; Src1 is read at Src0's positions.
+// colour overlay's tint, the same size (DESIGN §11.2). Src2: the moon
+// backdrop behind the half-mirror (§11.3), black until it has loaded.
+// Coordinates are in source pixels (srcPos - imageSrc0Origin()), never
+// imageDstSize(), which is the whole destination image; Src1 and Src2 are
+// read at Src0's positions.
 
 var Time float
 var Dim float     // 1 normally, less while paused
 var Scan float    // scanline strength, 0 when the lines would be too thin to show
 var Columns float // the monitor's lines across the picture: it's on its side
 var Bloom float   // the bloom's reach, in source pixels
+var Back float     // the backdrop's brightness behind the tube
+var BackEdge float // its brightness at and beyond the tube's edge
 
 // warp bends the picture like the tube's curved face.
 func warp(uv vec2) vec2 {
@@ -24,8 +28,19 @@ func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
 	o := imageSrc0Origin()
 	s := imageSrc0Size()
 	uv := warp((srcPos - o) / s)
-	if uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1 {
-		return vec4(0, 0, 0, 1)
+
+	// The backdrop is seen through the glass, not on the tube: it's flat,
+	// without the curve, lines or glow, and added to the picture (the
+	// half-mirror). It is dimmer behind the tube's face, brightening
+	// towards its edge to meet the glass art around it: gently at the
+	// sides, where the glass runs on, quickly at the top and bottom, where
+	// the bezel is close and the player and the UFO are.
+	ex := min(uv.x, 1-uv.x)
+	ey := min(uv.y, 1-uv.y)
+	behind := smoothstep(0, 0.3, ex) * smoothstep(0, 0.04, ey)
+	back := imageSrc2At(srcPos).rgb * mix(BackEdge, Back, behind)
+	if min(ex, ey) < 0 {
+		return vec4(back, 1)
 	}
 
 	p := o + uv*s
@@ -55,5 +70,5 @@ func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
 	c *= 1 - dot(d, d)*1.1
 	c *= 0.99 + 0.01*sin(Time*60)
 
-	return vec4(c*Dim, 1)
+	return vec4(c*Dim+back, 1)
 }

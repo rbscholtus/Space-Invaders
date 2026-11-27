@@ -48,8 +48,9 @@ presented as an upright arcade cabinet. A port of the 2010 Java version in
   package before the flag); no `ebitenutil`; check facts in the game code
   or by running it, not from memory; local reference PDFs in `docs/` are
   git-ignored. Browser: the e2e tests read `window.invadersState`
-  (`platform.PublishState`); keep it up to date when the app's modes
-  change. Sound: `internal/synth` is a port of MAME's circuits, so
+  (`platform.PublishState`) and `window.invadersLayout`
+  (`platform.PublishLayout`); keep them up to date when the app's modes or
+  layout change. Sound: `internal/synth` is a port of MAME's circuits, so
   read the MAME source before changing a block, and keep
   `TestAgainstMAME` passing without loosening its tolerances.
 - **Name issues and PRs in full** when writing to the user, in commits and

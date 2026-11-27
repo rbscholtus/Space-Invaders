@@ -9,4 +9,7 @@ type Params struct {
 	// Shader is how the picture is drawn ("crt" or "clean"), "" when not
 	// given. The app checks the name.
 	Shader string
+	// View is "auto", "cabinet" or "screen", "" when not given. The app
+	// checks the name.
+	View string
 }
