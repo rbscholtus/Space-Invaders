@@ -8,7 +8,8 @@
 // program runs in the browser (scripts/build.sh).
 //
 // Keys: 5 or C coin, 1 and 2 start, ←/→ (or A/D) move, Space (or ↑/W)
-// fire, P pause, M mute, - and = volume, F forget the remembered ROMs.
+// fire, P pause, M mute, - and = volume, V cabinet or picture alone, F
+// forget the remembered ROMs.
 package main
 
 import (
@@ -20,6 +21,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
+	"github.com/rbscholtus/Space-Invaders/assets"
 	"github.com/rbscholtus/Space-Invaders/internal/app"
 	"github.com/rbscholtus/Space-Invaders/internal/app/crt"
 	"github.com/rbscholtus/Space-Invaders/internal/invaders"
@@ -34,8 +36,16 @@ const (
 	exitUsage = 2
 )
 
-// windowScale is the window's size in native pixels at start-up.
-const windowScale = 3
+// The window's size at start-up: landscape, as most screens are, which
+// shows the cabinet's upper part (DESIGN §11.1).
+const (
+	windowWidth  = 1024
+	windowHeight = 768
+)
+
+// maxArtFile is the largest cabinet image the browser accepts; the largest
+// is well under it.
+const maxArtFile = 4 << 20
 
 // The lives DIP switch's range (DESIGN §7.2), and the volume's.
 const (
@@ -64,6 +74,8 @@ func cli(args []string, stderr io.Writer, run func(app.Options) error) int {
 	bonus1000 := fs.Bool("bonus1000", false, "DIP switch: bonus life at 1000 points instead of 1500")
 	volume := fs.Int("volume", defaultVolume, "sound volume, 0–100")
 	shader := fs.String("shader", "crt", "how the picture is drawn: crt (the monitor) or clean (pixel for pixel)")
+	viewName := fs.String("view", "auto", "what the window shows: cabinet, screen (the picture alone) "+
+		"or auto (by the window's size)")
 	fs.Usage = func() {
 		fmt.Fprintln(stderr, "usage: invaders [flags]")
 		fs.PrintDefaults()
@@ -78,9 +90,10 @@ func cli(args []string, stderr io.Writer, run func(app.Options) error) int {
 	}
 
 	mode, modeErr := crt.ParseMode(*shader)
+	view, viewErr := app.ParseView(*viewName)
 
 	if fs.NArg() != 0 || *lives < minLives || *lives > maxLives || *volume < 0 || *volume > maxVolume ||
-		modeErr != nil {
+		modeErr != nil || viewErr != nil {
 		fs.Usage()
 
 		return exitUsage
@@ -88,37 +101,50 @@ func cli(args []string, stderr io.Writer, run func(app.Options) error) int {
 
 	image, err := initialROMs(*roms)
 	if err != nil {
-		fmt.Fprintln(stderr, "invaders:", err)
-
-		return exitFail
+		return fail(stderr, err)
 	}
 
-	volumeGiven := fromURL(volume, &mode)
-
-	fs.Visit(func(f *flag.Flag) { volumeGiven = volumeGiven || f.Name == "volume" })
+	volumeInURL, viewInURL := fromURL(volume, &mode, &view)
 
 	opts := app.Options{
 		ROMs:        image,
-		VolumeGiven: volumeGiven,
+		VolumeGiven: volumeInURL || given(fs, "volume"),
 		DIPs:        invaders.DIPs{Lives: *lives, BonusAt1000: *bonus1000},
 		Volume:      float64(*volume) / maxVolume,
 		Shader:      mode,
+		View:        view,
+		ViewGiven:   viewInURL || given(fs, "view"),
+		Art:         readArt,
 		OnError:     func(err error) { fmt.Fprintln(stderr, "invaders:", err) },
 	}
 
 	if err := run(opts); err != nil {
-		fmt.Fprintln(stderr, "invaders:", err)
-
-		return exitFail
+		return fail(stderr, err)
 	}
 
 	return exitOK
 }
 
+// fail reports err and returns the exit code for it.
+func fail(stderr io.Writer, err error) int {
+	fmt.Fprintln(stderr, "invaders:", err)
+
+	return exitFail
+}
+
+// given reports whether the flag was set on the command line.
+func given(fs *flag.FlagSet, name string) bool {
+	set := false
+
+	fs.Visit(func(f *flag.Flag) { set = set || f.Name == name })
+
+	return set
+}
+
 // fromURL applies the page's URL parameters in the browser
 // (platform.URLParams; on the desktop there are none), and reports whether
-// it gave the volume.
-func fromURL(volume *int, mode *crt.Mode) bool {
+// they gave the volume and the view.
+func fromURL(volume *int, mode *crt.Mode, view *app.View) (bool, bool) {
 	params := platform.URLParams()
 	if params.Volume >= 0 {
 		*volume = params.Volume
@@ -128,7 +154,23 @@ func fromURL(volume *int, mode *crt.Mode) bool {
 		*mode = m
 	}
 
-	return params.Volume >= 0
+	v, err := app.ParseView(params.View)
+	if err == nil {
+		*view = v
+	}
+
+	return params.Volume >= 0, err == nil
+}
+
+// readArt reads one of the cabinet's images: embedded on the desktop,
+// fetched from next to the page in the browser (scripts/build.sh puts them
+// in cabinet/).
+func readArt(name string) ([]byte, error) {
+	if assets.ArtEmbedded {
+		return assets.ReadArt(name) //nolint:wrapcheck // it names the file
+	}
+
+	return platform.Fetch("cabinet/"+name, maxArtFile) //nolint:wrapcheck // it names the URL
 }
 
 // initialROMs loads the -roms set (an error if it can't), or the default
@@ -183,8 +225,8 @@ func loadROMs(path string) ([]byte, error) {
 
 // runWindow opens the window and runs the game until it's closed.
 func runWindow(opts app.Options) error {
-	ebiten.SetWindowTitle("Invaders: a Midway 8080 emulator")
-	ebiten.SetWindowSize(invaders.ScreenWidth*windowScale, invaders.ScreenHeight*windowScale)
+	ebiten.SetWindowTitle("1978 Invasion: a Space Invaders emulator")
+	ebiten.SetWindowSize(windowWidth, windowHeight)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 
 	if err := ebiten.RunGame(app.New(opts)); err != nil {

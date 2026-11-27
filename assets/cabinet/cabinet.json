@@ -1,0 +1,91 @@
+{
+  "name": "Midway-style upright",
+  "width": 1425,
+  "height": 2642,
+  "background": "#363636",
+  "image": "cabinet",
+  "backdrop": "backdrop.jpg",
+  "screen": {
+    "x": 416,
+    "y": 557,
+    "w": 595,
+    "h": 680
+  },
+  "marquee": {
+    "x": 85,
+    "y": 81,
+    "w": 1255,
+    "h": 301
+  },
+  "frame": {
+    "x": 20,
+    "y": 28,
+    "w": 1385,
+    "h": 1727
+  },
+  "controls": [
+    {
+      "id": "left",
+      "kind": "button",
+      "pressed": "left-pressed",
+      "cx": 367,
+      "cy": 1540,
+      "r": 40
+    },
+    {
+      "id": "right",
+      "kind": "button",
+      "pressed": "right-pressed",
+      "cx": 501,
+      "cy": 1540,
+      "r": 40
+    },
+    {
+      "id": "fire",
+      "kind": "button",
+      "pressed": "fire-pressed",
+      "cx": 891,
+      "cy": 1540,
+      "r": 40
+    },
+    {
+      "id": "start1",
+      "kind": "button",
+      "pressed": "start1-pressed",
+      "cx": 1168,
+      "cy": 1492,
+      "r": 40
+    },
+    {
+      "id": "start2",
+      "kind": "button",
+      "pressed": "start2-pressed",
+      "cx": 1177,
+      "cy": 1591,
+      "r": 40
+    },
+    {
+      "id": "coin1",
+      "kind": "slot",
+      "x": 667,
+      "y": 1977,
+      "w": 83,
+      "h": 85
+    },
+    {
+      "id": "coin2",
+      "kind": "slot",
+      "x": 843,
+      "y": 1977,
+      "w": 82,
+      "h": 85
+    },
+    {
+      "id": "lock",
+      "kind": "lock",
+      "cx": 990,
+      "cy": 2127,
+      "r": 24
+    }
+  ]
+}

@@ -2,12 +2,12 @@
 
 An emulator of the 1978 Space Invaders arcade machine (the Midway 8080
 board), being rewritten in Go so that it runs **in your browser, with nothing
-to install**, and on the desktop. It will look like an upright arcade cabinet,
-with the coloured screen overlay and the moon backdrop, and on phones simply
-the screen.
+to install**, and on the desktop. It looks like an upright arcade cabinet
+(our own art, in the style of Midway's), with the CRT's glow, the coloured
+screen overlay and the moon backdrop; on small screens, simply the screen.
 
-> **Status:** playable, with sound, in the browser and on the desktop. The
-> arcade cabinet and touch controls are next. The plan is in
+> **Status:** playable, with sound, in the browser and on the desktop, in its
+> cabinet. Touch and gamepad controls are next, then settings. The plan is in
 > [docs/DESIGN.md](docs/DESIGN.md) and the milestones in
 > [docs/ROADMAP.md](docs/ROADMAP.md).
 
@@ -33,7 +33,9 @@ uses `roms/invaders.zip` if it's there, or the set you loaded last time, or
 asks for one: drop it on the window. `-lives 3`…`6` and `-bonus1000` set
 the DIP switches; `-volume 0`…`100` the sound (default 50; volume and mute
 are remembered). `-shader clean` draws the plain picture instead of the CRT
-monitor (`?shader=clean` in the browser).
+monitor (`?shader=clean` in the browser). `-view cabinet` or `-view screen`
+shows the cabinet or the picture alone (`?view=` in the browser); by default
+it depends on the window's size, and `V` switches.
 
 ## ROMs
 
@@ -59,6 +61,7 @@ you press `F`.
 | `-` / `=` | Volume down / up |
 | `O` | Open your ROM files (browser, on the ROM screen) |
 | `F` | Forget the remembered ROMs and HI-SCORE |
+| `V` | The cabinet, or the picture alone (remembered) |
 
 On touch screens, the cabinet's buttons and coin slot will be the controls.
 

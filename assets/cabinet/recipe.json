@@ -1,0 +1,49 @@
+{
+  "name": "Midway-style upright",
+  "cabinet": {
+    "source": "cabinet03.png",
+    "crop": { "x": 55, "y": 58, "w": 1425, "h": 2642 },
+    "paintOut": [{ "x": 1374, "y": 2582, "w": 106, "h": 118 }],
+    "feather": 24
+  },
+  "glass": {
+    "source": "backdrop02.png",
+    "from": { "x": 0, "y": 440, "w": 2048, "h": 1455 },
+    "to": { "x": 248, "y": 585, "w": 1040, "h": 739 }
+  },
+  "marquee": {
+    "source": "marquee02.png",
+    "from": { "x": 0, "y": 292, "w": 3168, "h": 760 },
+    "to": { "x": 140, "y": 139, "w": 1255, "h": 301 }
+  },
+  "screen": { "x": 471, "y": 615, "w": 595, "h": 680 },
+  "frame": { "x": 75, "y": 86, "w": 1385, "h": 1727 },
+  "controls": [
+    { "id": "left", "kind": "button", "cx": 422, "cy": 1598, "r": 40 },
+    { "id": "right", "kind": "button", "cx": 556, "cy": 1598, "r": 40 },
+    { "id": "fire", "kind": "button", "cx": 946, "cy": 1598, "r": 40 },
+    { "id": "start1", "kind": "button", "cx": 1223, "cy": 1550, "r": 40 },
+    { "id": "start2", "kind": "button", "cx": 1232, "cy": 1649, "r": 40 },
+    { "id": "coin1", "kind": "slot", "x": 722, "y": 2035, "w": 83, "h": 85 },
+    { "id": "coin2", "kind": "slot", "x": 898, "y": 2035, "w": 82, "h": 85 },
+    { "id": "lock", "kind": "lock", "cx": 1045, "cy": 2185, "r": 24 }
+  ],
+  "texts": [
+    {
+      "text": "1978 INVASION", "font": "bold", "size": 150, "x": 642, "y": 290, "maxWidth": 860,
+      "colour": "#ffffff", "outline": "#d42a1e", "outlineWidth": 7, "tracking": 8
+    },
+    { "text": "LEFT", "font": "bold", "size": 30, "x": 422, "y": 1522, "colour": "#2b2b2b", "tracking": 3 },
+    { "text": "RIGHT", "font": "bold", "size": 30, "x": 556, "y": 1522, "colour": "#2b2b2b", "tracking": 3 },
+    { "text": "FIRE", "font": "bold", "size": 36, "x": 946, "y": 1690, "colour": "#2b2b2b", "tracking": 4 },
+    { "text": "1", "font": "bold", "size": 64, "x": 1150, "y": 1552, "colour": "#c81e1e" },
+    { "text": "2", "font": "bold", "size": 64, "x": 1150, "y": 1650, "colour": "#c81e1e" },
+    { "text": "START", "font": "bold", "size": 24, "x": 1228, "y": 1732, "colour": "#2b2b2b", "tracking": 3 },
+    {
+      "text": "INSERT COIN, PRESS START\nMOVE WITH LEFT AND RIGHT\nFIRE TO STOP THE INVASION",
+      "font": "medium", "size": 17, "x": 483, "y": 1710, "maxWidth": 250, "colour": "#333333", "lineHeight": 1.35
+    },
+    { "text": "25¢", "font": "bold", "size": 30, "x": 665, "y": 2078, "colour": "#ffffff" },
+    { "text": "25¢", "font": "bold", "size": 30, "x": 1037, "y": 2078, "colour": "#ffffff" }
+  ]
+}

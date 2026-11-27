@@ -187,6 +187,7 @@ Space-Invaders/
 ├── go.mod                      # module github.com/rbscholtus/Space-Invaders; go 1.27.x
 ├── cmd/
 │   ├── invaders/               # main: ebiten.RunGame (browser + desktop)
+│   ├── cabinet-gen/            # makes the cabinet art from the masters (§12)
 │   ├── trace/                  # headless run with an instruction trace (§3)
 │   └── cputest/                # runs the CP/M exercisers in the terminal
 ├── internal/
@@ -204,9 +205,10 @@ Space-Invaders/
 │   ├── platform/               # syscall/js lives only here (_js.go + _other.go pairs)
 │   ├── testrig/                # test helpers (golden frames, ROM lookup)
 │   └── app/
-│       ├── cabinet/  crt/  input/  sound/
-│       └── game.go  layout.go  settings.go  osd.go
-├── assets/                     # cabinet art, backdrop, fonts, assets.go (go:embed)
+│       ├── cabinet/  crt/  font/  input/  overlay/  romscreen/  sound/
+│       └── game.go  view.go  cabinetview.go  art.go  settings.go
+├── assets/                     # assets.go (go:embed): cabinet.json, and the art on the desktop
+│   ├── cabinet/                # cabinet-gen's output and recipe.json (§12)
 │   └── LICENSES.md             # origin and licence of every asset
 ├── third_party/
 │   └── 8080-exercisers/        # 8080PRE/8080EXM + sources + GPL licence (§15.2)
@@ -592,11 +594,48 @@ directly than the demo did.
 | **Cabinet** | The whole upright cabinet: marquee, bezel, screen, control panel (joystick or buttons, fire, 1P/2P start), coin door with a coin slot. | Default when the window is big enough. |
 | **Screen** | Only the picture: phosphor + colour overlay + moon backdrop, with a thin bezel. Touch controls under or beside it on touch screens. | Default on small screens (phones), or when chosen. |
 
-- **Auto:** "Screen" when the picture in cabinet view would be smaller than
-  about 2× native height (512 px of real pixels) ⚠ tune on devices.
+- **How much of the cabinet** (`internal/app/view.go`, M5b). The picture
+  comes first; the cabinet is decoration. The cabinet view shows its
+  **frame** (`frame` in `cabinet.json`): from the cabinet's top edge to the
+  control panel's edge, so the marquee, the picture and the buttons,
+  without the panel's front, the coin door or the space around. The frame
+  is as big as fits, centred across, its top at the window's top. In a
+  window narrower than the frame, more of the cabinet shows below it; once
+  all of it shows (a phone held upright), the cabinet is centred, with as
+  much room above as below. Compared with the whole cabinet, that makes the
+  picture about 1.5× as big in a landscape window.
+  In M5c the player can zoom from there (below).
+- **Auto:** "Screen" when the frame would make the picture less than 160
+  CSS pixels tall, as on a phone held sideways ⚠ tune on devices. (The
+  first plan, 512 real pixels, chose the screen view on most laptops.)
+- **Zoom (M5c, decided).** The player zooms between the whole cabinet and
+  a limit: the desktop's usual keys (Cmd/Ctrl with `+`, `−`, `0`) and
+  Ctrl+scroll (how a Mac trackpad's pinch reaches the browser; the page
+  stops the browser zooming itself), and a pinch on touch screens. On the
+  desktop the limit is the picture alone (the screen view). On touch
+  screens it is the picture and the buttons, as they are the controls.
+  Zooming in past that shows the screen view with its own touch buttons,
+  which gives phones in portrait the biggest picture. A pinch only counts
+  when both fingers start away from the buttons, as moving and firing is
+  two fingers too. The zoom is remembered.
+- **Double tap or double-click (M5c, M5d, decided):** on the marquee, the
+  settings; on the instruction plate, a coin (a single tap does nothing,
+  so a stray touch costs nothing); anywhere else, back to the frame. The
+  coin door isn't in the frame, so this is how touch players insert coins
+  and open the settings.
 - **Overrides:** `-view=auto|cabinet|screen` (desktop flag), `?view=...`
-  (URL parameter, through `platform` params as in Chippie), a key (`V`) and a
-  setting. A choice made by the player is remembered.
+  (URL parameter, through `platform` params as in Chippie), a key (`V`) and
+  (M5d) a setting. `V` switches between the cabinet and the screen, and that
+  choice is remembered (`Prefs`); a view given at start wins over it.
+- **The art** is fetched in the browser (`platform.Fetch`, no `net/http`)
+  from `cabinet/` next to the page, and embedded in the desktop build
+  (`assets`). Only `cabinet.json` is in both, so the layout is right from
+  the first frame. It loads in a goroutine, decoding in bands with a short
+  sleep between them (WebAssembly doesn't preempt). The picture runs
+  meanwhile, and the cabinet fades in. The size loaded is the smallest that
+  is at least as wide as the drawn cabinet (`ScaleFor`); the screen view
+  loads `@1x`, for the backdrop. The browser tests read the layout from
+  `window.invadersLayout` (`platform.PublishLayout`).
 
 ### 11.2 The colour overlay
 
@@ -629,6 +668,16 @@ it. Where the screen is black, the backdrop shows; where it's lit, the
 phosphor is brighter than the backdrop. The shader therefore composites
 **additively**: `out = backdrop * backdropLevel + phosphor * overlay`, not a
 plain blend. The backdrop is our own art (§12).
+
+Since M5b `crt.kage` does this, with `backdrop.jpg` (the glass art under the
+screen) scaled to the render size, as Kage's sources must all be its size.
+The backdrop is behind the glass, not on the tube, so it gets no curve,
+lines, bloom or afterglow. Its level is 0.35 behind the tube (⚠ tune by
+eye). In the cabinet view it brightens to 1 towards the tube's edge,
+gently at the sides and quickly at the top and bottom. There it meets the
+same art in the cabinet image, so the glass shows no seam. The screen view
+has no glass, so there the level stays 0.35 everywhere. The clean mode
+draws no backdrop.
 
 ### 11.4 CRT
 
@@ -669,9 +718,16 @@ at 1680×1920. Phones are still to be measured.
   own marquee text and our own moon backdrop. No screenshots or scans of real
   artwork.
 - **Pipeline:** as in Chippie: AI-generated masters (outside the repository,
-  `assets/source/`), a recipe, and a generator that writes pre-scaled `@1x`,
-  `@2x`, `@3x` files into `assets/cabinet/`. Layout positions (screen, buttons,
-  coin slot) come from a `cabinet.json`, not code.
+  `assets/source/`), a recipe (`assets/cabinet/recipe.json`), and a
+  generator, `cmd/cabinet-gen`, that puts the glass and marquee art into the
+  cabinet, draws our lettering, and writes pre-scaled `@1x`, `@2x`, `@3x`
+  files into `assets/cabinet/`: the cabinet, the pressed buttons, and
+  `backdrop.jpg` (the glass art behind the picture, §11.3). Layout positions
+  (screen, marquee, the frame (§11.1), buttons, coin slots, lock) come
+  from `cabinet.json`
+  (`internal/app/cabinet`), not code. The prompts are in
+  [cabinet-artwork.md](cabinet-artwork.md); `go run ./cmd/cabinet-gen
+  -preview <file>` shows the alignment.
 - **Every asset** has its origin and licence recorded in `assets/LICENSES.md`.
 - **Reference photos** of real cabinets are kept locally in `assets/reference/`
   (git-ignored), for inspiration only. They are never committed, and never
@@ -725,7 +781,7 @@ at 1680×1920. Phones are still to be measured.
 | `-` / `=` | Volume down / up (10% steps; `-volume 0–100` at start, default 50) |
 | `O` | Open the ROM files (browser file picker), on the ROM screen |
 | `F` | Forget the remembered ROMs and HI-SCORE, and go back to the ROM screen |
-| `V` | Switch view |
+| `V` | Switch between the cabinet and the picture alone (§11.1) |
 | `F1` | Stats overlay |
 
 **Coins:**
@@ -1024,7 +1080,10 @@ found. Benchmarks: `BenchmarkFrame` (one emulated frame), `BenchmarkEXM`
 speed.
 
 **Size** (M4, Go 1.27.4, Ebitengine 2.10.6, `-trimpath -ldflags="-s -w"`):
-`invaders-gz.wasm` is 3,429 KB (14,540 KB unpacked). Nearly all of it is
+`invaders-gz.wasm` is 3,429 KB (14,540 KB unpacked); 3,538 KB since M5b,
+which added the JPEG and PNG decoders for the cabinet's art. The art itself
+is fetched separately: `@1x` with the backdrop and the pressed buttons is
+about 0.3 MB, `@2x` about 0.45 MB. Nearly all of it is
 the Go runtime and Ebitengine; there is no `net/http` (CI checks) and no font
 file. CI fails the build above 4 MB gzip and writes the size to the job
 summary. Served from `localhost`, the page downloads, unpacks and compiles

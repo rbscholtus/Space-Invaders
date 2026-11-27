@@ -14,6 +14,22 @@ export async function appState(page: Page): Promise<AppState> {
   return json ? JSON.parse(json) : { mode: "loading", message: "", hiscore: 0, shader: "crt" };
 }
 
+// Where things are, in CSS pixels (internal/app/game.go publishLayout).
+export type Box = { x: number; y: number; w: number; h: number };
+export type AppLayout = {
+  view: "cabinet" | "screen";
+  chosen: "auto" | "cabinet" | "screen";
+  tube: Box;
+  cabinet: Box;
+  frame: Box;
+  art: boolean;
+};
+
+export async function appLayout(page: Page): Promise<AppLayout | undefined> {
+  const json = await page.evaluate(() => (window as any).invadersLayout);
+  return json ? JSON.parse(json) : undefined;
+}
+
 // Waits until the loader has started the app.
 export async function waitForApp(page: Page) {
   await page.waitForFunction(() => (window as any).invadersTimings !== undefined, null, { timeout: 90_000 });
