@@ -225,7 +225,7 @@ func loadROMs(path string) ([]byte, error) {
 
 // runWindow opens the window and runs the game until it's closed.
 func runWindow(opts app.Options) error {
-	ebiten.SetWindowTitle("Invaders: a Midway 8080 emulator")
+	ebiten.SetWindowTitle("1978 Invasion: a Space Invaders emulator")
 	ebiten.SetWindowSize(windowWidth, windowHeight)
 	ebiten.SetWindowResizingMode(ebiten.WindowResizingModeEnabled)
 
